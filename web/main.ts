@@ -963,6 +963,19 @@ class GitGraphView {
 		return true;
 	}
 
+	private cherryPickCommitsPossible(): boolean {
+		if (this.selectedCommits.size === 0) return false;
+
+		for (const hash of Array.from(this.selectedCommits)) {
+			const index = this.commitLookup[hash];
+			const commit = this.commits[index];
+			if (commit.parents.length > 1) {
+				return false;
+			}
+		}
+		return true;
+	}
+
 	private squashCommitsAction(target: DialogTarget & CommitTarget) {
 		const selectedCommits = this.getSelectedCommitsArray();
 		if (selectedCommits.length < 2) return;
@@ -1020,6 +1033,57 @@ class GitGraphView {
 					repo: this.currentRepo,
 					commits: selectedCommits
 				}, 'Dropping Commits');
+				this.clearCommitSelection();
+			},
+			target
+		);
+	}
+
+	private cherryPickCommitsAction(target: DialogTarget) {
+		const selectedCommits = this.getSelectedCommitsArray().reverse();
+		if (selectedCommits.length === 0) return;
+
+		const displayCount = Math.min(selectedCommits.length, 5);
+		const commitsList = selectedCommits.slice(0, displayCount).map(hash => {
+			const commitData = this.commits[this.commitLookup[hash]];
+			return `<b>${abbrevCommit(hash)}</b> - ${escapeHtml(commitData.message)}`;
+		}).join('<br>');
+
+		const moreText = selectedCommits.length > 5
+			? `<br>...and ${selectedCommits.length - 5} more commits`
+			: '';
+
+		const warningText = selectedCommits.length > 20
+			? '<br><br><i>Warning: Cherry-picking many commits increases the risk of conflicts.</i>'
+			: '';
+
+		const inputs: DialogInput[] = [
+			{
+				type: DialogInputType.Checkbox,
+				name: 'Record Origin',
+				value: this.config.dialogDefaults.cherryPick.recordOrigin,
+				info: 'Record that this commit was the origin of the cherry pick by appending a line to the original commit message that states "(cherry picked from commit ...​)".'
+			},
+			{
+				type: DialogInputType.Checkbox,
+				name: 'No Commit',
+				value: this.config.dialogDefaults.cherryPick.noCommit,
+				info: 'Cherry picked changes will be staged but not committed, so that you can select and commit specific parts of this commit.'
+			}
+		];
+
+		dialog.showForm(
+			`Are you sure you want to cherry pick ${selectedCommits.length} commit${selectedCommits.length > 1 ? 's' : ''}?<br><br>${commitsList}${moreText}${warningText}`,
+			inputs,
+			'Yes, cherry pick',
+			(values) => {
+				runAction({
+					command: 'cherrypickCommits',
+					repo: this.currentRepo,
+					commits: selectedCommits,
+					recordOrigin: <boolean>values[0],
+					noCommit: <boolean>values[1]
+				}, 'Cherry picking Commits');
 				this.clearCommitSelection();
 			},
 			target
@@ -1451,6 +1515,15 @@ class GitGraphView {
 				title: 'Drop Selected Commits' + ELLIPSIS,
 				visible: visibility.drop,
 				onClick: () => this.dropSelectedCommitsAction(target)
+			});
+		}
+
+		// Cherry Pick option
+		if (this.cherryPickCommitsPossible()) {
+			multiSelectActions.push({
+				title: 'Cherry Pick Selected Commits' + ELLIPSIS,
+				visible: visibility.cherrypick,
+				onClick: () => this.cherryPickCommitsAction(target)
 			});
 		}
 
@@ -3772,6 +3845,9 @@ window.addEventListener('load', () => {
 				break;
 			case 'cherrypickCommit':
 				refreshAndDisplayErrors(msg.errors, 'Unable to Cherry Pick Commit');
+				break;
+			case 'cherrypickCommits':
+				refreshAndDisplayErrors(msg.errors, 'Unable to Cherry Pick Commits');
 				break;
 			case 'cleanUntrackedFiles':
 				refreshOrDisplayError(msg.error, 'Unable to Clean Untracked Files');

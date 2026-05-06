@@ -695,6 +695,16 @@ export interface ResponseCherrypickCommit extends ResponseWithMultiErrorInfo {
 	readonly command: 'cherrypickCommit';
 }
 
+export interface RequestCherrypickCommits extends RepoRequest {
+	readonly command: 'cherrypickCommits';
+	readonly commits: ReadonlyArray<string>;
+	readonly recordOrigin: boolean;
+	readonly noCommit: boolean;
+}
+export interface ResponseCherrypickCommits extends ResponseWithMultiErrorInfo {
+	readonly command: 'cherrypickCommits';
+}
+
 export interface RequestCleanUntrackedFiles extends RepoRequest {
 	readonly command: 'cleanUntrackedFiles';
 	readonly directories: boolean;
@@ -1322,6 +1332,7 @@ export type RequestMessage =
 	| RequestCheckoutBranch
 	| RequestCheckoutCommit
 	| RequestCherrypickCommit
+	| RequestCherrypickCommits
 	| RequestCleanUntrackedFiles
 	| RequestCommitDetails
 	| RequestCompareCommits
@@ -1390,6 +1401,7 @@ export type ResponseMessage =
 	| ResponseCheckoutBranch
 	| ResponseCheckoutCommit
 	| ResponseCherrypickCommit
+	| ResponseCherrypickCommits
 	| ResponseCleanUntrackedFiles
 	| ResponseCompareCommits
 	| ResponseCommitDetails

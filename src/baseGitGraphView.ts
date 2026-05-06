@@ -210,6 +210,14 @@ export abstract class BaseGitGraphView extends Disposable {
 				}
 				this.sendMessage({ command: 'cherrypickCommit', errors: errorInfos });
 				break;
+			case 'cherrypickCommits':
+				errorInfos = await this.dataSource.cherrypickCommits(msg.repo, msg.commits, msg.recordOrigin, msg.noCommit);
+				const cherrypickSucceeded = !errorInfos.some((errorInfo) => errorInfo !== null);
+				if (cherrypickSucceeded && msg.noCommit) {
+					errorInfos.push(await viewScm());
+				}
+				this.sendMessage({ command: 'cherrypickCommits', errors: errorInfos });
+				break;
 			case 'cleanUntrackedFiles':
 				this.sendMessage({
 					command: 'cleanUntrackedFiles',

@@ -1150,6 +1150,31 @@ export class DataSource extends Disposable {
 	}
 
 	/**
+	 * Cherry-pick multiple commits in sequence.
+	 * Stops on first error (conflict), preserving intermediate state.
+	 * @param repo The path of the repository.
+	 * @param commits Array of commit hashes to cherry-pick (from oldest to newest).
+	 * @param recordOrigin Is `-x` enabled.
+	 * @param noCommit Is `--no-commit` enabled.
+	 * @returns The ErrorInfo from each executed command.
+	 */
+	public async cherrypickCommits(repo: string, commits: ReadonlyArray<string>, recordOrigin: boolean, noCommit: boolean): Promise<ErrorInfo[]> {
+		if (commits.length === 0) {
+			return ['No commits selected for cherry-picking.'];
+		}
+
+		const errors: ErrorInfo[] = [];
+		for (const commitHash of commits) {
+			const error = await this.cherrypickCommit(repo, commitHash, 0, recordOrigin, noCommit);
+			errors.push(error);
+			if (error !== null) {
+				return errors;
+			}
+		}
+		return errors;
+	}
+
+	/**
 	 * Drop a commit in a repository.
 	 * @param repo The path of the repository.
 	 * @param commitHash The hash of the commit to drop.
