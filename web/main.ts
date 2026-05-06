@@ -43,6 +43,8 @@ class GitGraphView {
 		hash: string | null
 	} = { time: 0, hash: null };
 
+	public pendingEditCommitMessage: { hash: string, target: DialogTarget } | null = null;
+
 	private readonly findWidget: FindWidget;
 	private readonly settingsWidget: SettingsWidget;
 	private readonly repoDropdown: Dropdown;
@@ -1092,14 +1094,27 @@ class GitGraphView {
 
 	private editCommitMessageAction(target: DialogTarget & CommitTarget) {
 		const hash = target.hash;
-		const commit = this.commits[this.commitLookup[hash]];
 
+		// Check if commit details are already loaded
+		const expandedCommit = this.expandedCommit;
+		if (expandedCommit !== null && expandedCommit.commitHash === hash && expandedCommit.commitDetails !== null) {
+			// Use the full commit body from commit details
+			this.showEditCommitMessageDialog(hash, expandedCommit.commitDetails.body, target);
+		} else {
+			// Request commit body to get the full message
+			sendMessage({ command: 'commitBody', repo: this.currentRepo, commitHash: hash });
+			// Store callback to show dialog after receiving commit body
+			this.pendingEditCommitMessage = { hash, target };
+		}
+	}
+
+	public showEditCommitMessageDialog(hash: string, defaultMessage: string, target: DialogTarget) {
 		dialog.showForm(
 			`Edit commit message for <b><i>${abbrevCommit(hash)}</i></b>:`,
 			[{
-				type: DialogInputType.Text,
+				type: DialogInputType.TextArea,
 				name: 'Commit Message',
-				default: commit.message,
+				default: defaultMessage,
 				placeholder: 'Enter the new commit message'
 			},
 			{ type: DialogInputType.Checkbox, name: 'No Verify', value: false }],
@@ -1110,7 +1125,7 @@ class GitGraphView {
 					dialog.showError('Commit message cannot be empty.', null, null, null);
 					return;
 				}
-				if (newMessage === commit.message) {
+				if (newMessage === defaultMessage) {
 					return; // No change needed
 				}
 				runAction({
@@ -3858,6 +3873,18 @@ window.addEventListener('load', () => {
 				} else {
 					gitGraph.closeCommitDetails(true);
 					dialog.showError('Unable to load Commit Details', msg.error, null, null);
+				}
+				break;
+			case 'commitBody':
+				if (msg.body !== null) {
+					// Check if there's a pending edit commit message request
+					if (gitGraph.pendingEditCommitMessage !== null) {
+						const pending = gitGraph.pendingEditCommitMessage;
+						gitGraph.pendingEditCommitMessage = null;
+						gitGraph.showEditCommitMessageDialog(pending.hash, msg.body, pending.target);
+					}
+				} else {
+					dialog.showError('Unable to get commit message', null, null, null);
 				}
 				break;
 			case 'compareCommits':

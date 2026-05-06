@@ -96,7 +96,26 @@ body.vscode-high-contrast .dialog{
 	font-size:13px;
 	line-height:17px;
 }
-.dialogContent > table.dialogForm input[type=text]:focus, .dialogContent .dialogFormCheckbox > label > input[type=checkbox]:focus ~ .customCheckbox, .dialogContent .dialogFormRadio > label > input[type=radio]:focus ~ .customRadio{
+.dialogContent > table.dialogForm textarea{
+	width:100%;
+	padding:4px 6px;
+	box-sizing:border-box;
+	outline-style:none;
+	background-color:rgba(128,128,128,0.1);
+	border:1px solid rgba(128,128,128,0.5);
+	border-radius:4px;
+	color:var(--vscode-menu-foreground);
+	font-family:var(--vscode-font-family);
+	font-size:13px;
+	line-height:17px;
+	resize:vertical;
+	white-space:pre-wrap;
+}
+.dialogContent > table.dialogForm textarea::placeholder{
+	color:var(--vscode-menu-foreground);
+	opacity:0.4;
+}
+.dialogContent > table.dialogForm input[type=text]:focus, .dialogContent > table.dialogForm textarea:focus, .dialogContent .dialogFormCheckbox > label > input[type=checkbox]:focus ~ .customCheckbox, .dialogContent .dialogFormRadio > label > input[type=radio]:focus ~ .customRadio{
 	border-color:var(--vscode-focusBorder);
 }
 .dialogContent > table.dialogForm input[type=text]::placeholder{

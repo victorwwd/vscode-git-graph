@@ -241,6 +241,14 @@ export abstract class BaseGitGraphView extends Disposable {
 					refresh: msg.refresh
 				});
 				break;
+			case 'commitBody':
+				const commitBody = await this.dataSource.getCommitBody(msg.repo, msg.commitHash);
+				this.sendMessage({
+					command: 'commitBody',
+					body: commitBody,
+					error: commitBody === null ? 'Unable to get commit message' : null
+				});
+				break;
 			case 'compareCommits':
 				this.sendMessage({
 					command: 'compareCommits',

@@ -512,6 +512,18 @@ export class DataSource extends Disposable {
 	}
 
 	/**
+	 * Get the full body of a commit.
+	 * @param repo The path of the repository.
+	 * @param commitHash The commit hash.
+	 * @returns The body string, or NULL if an error occurred.
+	 */
+	public getCommitBody(repo: string, commitHash: string): Promise<string | null> {
+		return this.spawnGit(['-c', 'log.showSignature=false', 'log', '--format=%B', '-n', '1', commitHash, '--'], repo, (stdout) => {
+			return stdout.trim();
+		}).then((body) => body, () => null);
+	}
+
+	/**
 	 * Get the URL of a repositories remote.
 	 * @param repo The path of the repository.
 	 * @param remote The name of the remote.
