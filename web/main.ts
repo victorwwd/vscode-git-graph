@@ -3064,12 +3064,12 @@ class GitGraphView {
 			for (j = 0; j < path.length; j++) {
 				absPath += '/' + path[j];
 				if (typeof this.gitRepos[absPath] !== 'undefined') {
-					if (typeof cur.contents[path[j]] === 'undefined') {
+					if (!Object.prototype.hasOwnProperty.call(cur.contents, path[j])) {
 						cur.contents[path[j]] = { type: 'repo', name: path[j], path: absPath };
 					}
 					break;
 				} else if (j < path.length - 1) {
-					if (typeof cur.contents[path[j]] === 'undefined') {
+					if (!Object.prototype.hasOwnProperty.call(cur.contents, path[j])) {
 						contents = {};
 						cur.contents[path[j]] = { type: 'folder', name: path[j], folderPath: absPath.substring(this.currentRepo.length + 1), contents: contents, open: true, reviewed: true };
 					}
@@ -4353,7 +4353,7 @@ function generateFileTreeLeafHtml(name: string, leaf: FileTreeLeaf, gitFiles: Re
 function alterFileTreeFolderOpen(folder: FileTreeFolder, folderPath: string, open: boolean) {
 	let path = folderPath.split('/'), i, cur = folder;
 	for (i = 0; i < path.length; i++) {
-		if (typeof cur.contents[path[i]] !== 'undefined') {
+		if (Object.prototype.hasOwnProperty.call(cur.contents, path[i])) {
 			cur = <FileTreeFolder>cur.contents[path[i]];
 			if (i === path.length - 1) cur.open = open;
 		} else {
@@ -4365,7 +4365,7 @@ function alterFileTreeFolderOpen(folder: FileTreeFolder, folderPath: string, ope
 function alterFileTreeFileReviewed(folder: FileTreeFolder, filePath: string, reviewed: boolean) {
 	let path = filePath.split('/'), i, cur = folder, folders = [folder];
 	for (i = 0; i < path.length; i++) {
-		if (typeof cur.contents[path[i]] !== 'undefined') {
+		if (Object.prototype.hasOwnProperty.call(cur.contents, path[i])) {
 			if (i < path.length - 1) {
 				cur = <FileTreeFolder>cur.contents[path[i]];
 				folders.push(cur);
