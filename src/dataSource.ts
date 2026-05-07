@@ -6,7 +6,7 @@ import * as vscode from 'vscode';
 import { AskpassEnvironment, AskpassManager } from './askpass/askpassManager';
 import { getConfig } from './config';
 import { Logger } from './logger';
-import { ActionedUser, CommitOrdering, DateType, DeepWriteable, ErrorInfo, ErrorInfoExtensionPrefix, GitCommit, GitCommitDetails, GitCommitStash, GitConfigLocation, GitFileChange, GitFileStatus, GitPushBranchMode, GitRepoConfig, GitRepoConfigBranches, GitResetMode, GitSignature, GitSignatureStatus, GitStash, GitTagDetails, MergeActionOn, RebaseActionOn, SquashMessageFormat, TagType, Writeable } from './types';
+import { ActionedUser, CommitOrdering, DateType, DeepWriteable, ErrorInfo, ErrorInfoExtensionPrefix, GitCommit, GitCommitDetails, GitCommitStash, GitConfigLocation, GitFileChange, GitFileStatus, GitPushBranchMode, GitRepoConfig, GitRepoConfigBranches, GitResetMode, GitSignature, GitSignatureStatus, GitStash, GitTagDetails, MergeActionOn, RebaseActionOn, SquashMessageFormat, TagSorting, TagType, Writeable } from './types';
 import { GitExecutable, GitVersionRequirement, UNABLE_TO_FIND_GIT_MSG, UNCOMMITTED, abbrevCommit, constructIncompatibleGitVersionMessage, doesVersionMeetRequirement, getPathFromStr, getPathFromUri, openGitTerminal, pathWithTrailingSlash, realpath, resolveSpawnOutput, showErrorMessage } from './utils';
 import { Disposable } from './utils/disposable';
 import { Event } from './utils/event';
@@ -138,18 +138,21 @@ export class DataSource extends Disposable {
 		return Promise.all([
 			this.getBranches(repo, showRemoteBranches, hideRemotes),
 			this.getRemotes(repo),
-			showStashes ? this.getStashes(repo) : Promise.resolve([])
+			showStashes ? this.getStashes(repo) : Promise.resolve([]),
+			this.getTags(repo)
 		]).then((results) => {
 			/* eslint no-console: "error" */
-			return { branches: results[0].branches, head: results[0].head, remotes: results[1], stashes: results[2], error: null };
+			return { branches: results[0].branches, head: results[0].head, remotes: results[1], stashes: results[2], tags: results[3], error: null };
 		}).catch((errorMessage) => {
-			return { branches: [], head: null, remotes: [], stashes: [], error: errorMessage };
+			return { branches: [], head: null, remotes: [], stashes: [], tags: [], error: errorMessage };
 		});
 	}
 	/**
 	 * Get the commits in a repository.
 	 * @param repo The path of the repository.
 	 * @param branches The list of branch heads to display, or NULL (show all).
+	 * @param authors The list of authors to filter by, or NULL (show all).
+	 * @param tags The list of tags to display, or NULL (show all).
 	 * @param maxCommits The maximum number of commits to return.
 	 * @param showTags Are tags are shown.
 	 * @param showRemoteBranches Are remote branches shown.
@@ -161,10 +164,13 @@ export class DataSource extends Disposable {
 	 * @param stashes An array of all stashes in the repository.
 	 * @returns The commits in the repository.
 	 */
-	public getCommits(repo: string, branches: ReadonlyArray<string> | null, authors: ReadonlyArray<string> | null, maxCommits: number, showTags: boolean, showRemoteBranches: boolean, includeCommitsMentionedByReflogs: boolean, onlyFollowFirstParent: boolean, commitOrdering: CommitOrdering, remotes: ReadonlyArray<string>, hideRemotes: ReadonlyArray<string>, stashes: ReadonlyArray<GitStash>, simplifyByDecoration: boolean): Promise<GitCommitData> {
+	public getCommits(repo: string, branches: ReadonlyArray<string> | null, authors: ReadonlyArray<string> | null, tags: ReadonlyArray<string> | null, maxCommits: number, showTags: boolean, showRemoteBranches: boolean, includeCommitsMentionedByReflogs: boolean, onlyFollowFirstParent: boolean, commitOrdering: CommitOrdering, remotes: ReadonlyArray<string>, hideRemotes: ReadonlyArray<string>, stashes: ReadonlyArray<GitStash>, simplifyByDecoration: boolean): Promise<GitCommitData> {
 		const config = getConfig();
+		const refs = branches === null && tags === null
+			? null
+			: (branches || []).concat(tags || []);
 		return Promise.all([
-			this.getLog(repo, branches, authors, maxCommits + 1, showTags && config.showCommitsOnlyReferencedByTags, showRemoteBranches, includeCommitsMentionedByReflogs, onlyFollowFirstParent, commitOrdering, remotes, hideRemotes, stashes, simplifyByDecoration),
+			this.getLog(repo, refs, authors, maxCommits + 1, showTags && config.showCommitsOnlyReferencedByTags, showRemoteBranches, includeCommitsMentionedByReflogs, onlyFollowFirstParent, commitOrdering, remotes, hideRemotes, stashes, simplifyByDecoration),
 			this.getRefs(repo, showRemoteBranches, config.showRemoteHeads, hideRemotes).then((refData: GitRefData) => refData, (errorMessage: string) => errorMessage)
 		]).then(async (results) => {
 			let commits: GitCommitRecord[] = results[0], refData: GitRefData | string = results[1], i;
@@ -1732,7 +1738,7 @@ export class DataSource extends Disposable {
 	/**
 	 * Get the raw commits in a repository.
 	 * @param repo The path of the repository.
-	 * @param branches The list of branch heads to display, or NULL (show all).
+	 * @param refs The list of refs (branches/tags) to display, or NULL (show all).
 	 * @param num The maximum number of commits to return.
 	 * @param includeTags Include commits only referenced by tags.
 	 * @param includeRemotes Include remote branches.
@@ -1744,7 +1750,7 @@ export class DataSource extends Disposable {
 	 * @param stashes An array of all stashes in the repository.
 	 * @returns An array of commits.
 	 */
-	private getLog(repo: string, branches: ReadonlyArray<string> | null, authors: ReadonlyArray<string> | null, num: number, includeTags: boolean, includeRemotes: boolean, includeCommitsMentionedByReflogs: boolean, onlyFollowFirstParent: boolean, order: CommitOrdering, remotes: ReadonlyArray<string>, hideRemotes: ReadonlyArray<string>, stashes: ReadonlyArray<GitStash>, simplifyByDecoration: boolean) {
+	private getLog(repo: string, refs: ReadonlyArray<string> | null, authors: ReadonlyArray<string> | null, num: number, includeTags: boolean, includeRemotes: boolean, includeCommitsMentionedByReflogs: boolean, onlyFollowFirstParent: boolean, order: CommitOrdering, remotes: ReadonlyArray<string>, hideRemotes: ReadonlyArray<string>, stashes: ReadonlyArray<GitStash>, simplifyByDecoration: boolean) {
 		const args = ['-c', 'log.showSignature=false', 'log', '--max-count=' + num, '--format=' + this.gitFormatLog, '--' + order + '-order'];
 		if (simplifyByDecoration) {
 			args.push('--simplify-by-decoration');
@@ -1757,9 +1763,9 @@ export class DataSource extends Disposable {
 				args.push(`--author=${authors[i]} <`);
 			}
 		}
-		if (branches !== null) {
-			for (let i = 0; i < branches.length; i++) {
-				args.push(branches[i]);
+		if (refs !== null) {
+			for (let i = 0; i < refs.length; i++) {
+				args.push(refs[i]);
 			}
 		} else {
 			// Show All
@@ -1901,6 +1907,39 @@ export class DataSource extends Disposable {
 			let lines = stdout.split(EOL_REGEX);
 			lines.pop();
 			return lines;
+		});
+	}
+
+	/**
+	 * Get the tags in a repository.
+	 * @param repo The path of the repository.
+	 * @returns An array of tag names.
+	 */
+	private getTags(repo: string): Promise<string[]> {
+		const config = getConfig(repo);
+		let sortArg: string;
+
+		switch (config.tagSorting) {
+			case TagSorting.Semantic:
+				sortArg = '--sort=-v:refname';
+				break;
+			case TagSorting.Alphabetical:
+				sortArg = '--sort=refname';
+				break;
+			default: // TagSorting.Date
+				sortArg = '--sort=-creatordate';
+		}
+
+		return this.spawnGit(['tag', '--list', sortArg], repo, (stdout) => {
+			const lines = stdout.split(EOL_REGEX);
+			lines.pop();
+			return lines.slice(0, config.maxTags);
+		}).catch(() => {
+			return this.spawnGit(['tag', '--list', '--sort=-creatordate'], repo, (stdout) => {
+				const lines = stdout.split(EOL_REGEX);
+				lines.pop();
+				return lines.slice(0, config.maxTags);
+			});
 		});
 	}
 
@@ -2264,6 +2303,7 @@ interface GitRefData {
 interface GitRepoInfo extends GitBranchData {
 	remotes: string[];
 	stashes: GitStash[];
+	tags: string[];
 }
 
 interface GitRepoConfigData {

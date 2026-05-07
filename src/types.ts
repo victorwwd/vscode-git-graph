@@ -577,6 +577,12 @@ export const enum TabIconColourTheme {
 	Grey
 }
 
+export const enum TagSorting {
+	Date = 'date',
+	Semantic = 'semantic',
+	Alphabetical = 'alpha'
+}
+
 export const enum TagType {
 	Annotated,
 	Lightweight
@@ -975,6 +981,7 @@ export interface RequestLoadCommits extends RepoRequest {
 	readonly remotes: ReadonlyArray<string>;
 	readonly hideRemotes: ReadonlyArray<string>;
 	readonly stashes: ReadonlyArray<GitStash>;
+	readonly tags: ReadonlyArray<string> | null; // null => Show All
 }
 export interface ResponseLoadCommits extends ResponseWithErrorInfo {
 	readonly command: 'loadCommits';
@@ -1012,6 +1019,7 @@ export interface ResponseLoadRepoInfo extends ResponseWithErrorInfo {
 	readonly remotes: ReadonlyArray<string>;
 	readonly stashes: ReadonlyArray<GitStash>;
 	readonly isRepo: boolean;
+	readonly tags: ReadonlyArray<string>;
 }
 
 export interface RequestLoadRepos extends BaseMessage {

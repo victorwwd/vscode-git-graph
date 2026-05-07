@@ -1258,6 +1258,23 @@
 					"default": "editor",
 					"description": "Specifies where to display the Git Graph view by default."
 				},
+				"git-graph.maxTags": {
+					"type": "number",
+					"default": 1000,
+					"minimum": 1,
+					"description": "Maximum number of tags to display (prevents performance issues in large mono-repos; excess tags will be truncated)"
+				},
+				"git-graph.tagSorting": {
+					"type": "string",
+					"default": "date",
+					"enum": ["date", "semantic", "alpha"],
+					"enumDescriptions": [
+						"Sort by creation date (newest first)",
+						"Sort by semantic versioning (v1.10 > v1.9)",
+						"Sort alphabetically"
+					],
+					"description": "The sorting method for the tag list"
+				},
 				"git-graph.autoCenterCommitDetailsView": {
 					"type": "boolean",
 					"default": true,

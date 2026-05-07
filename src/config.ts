@@ -25,6 +25,7 @@ import {
 	RepoDropdownOrder,
 	SquashMessageFormat,
 	TabIconColourTheme,
+	TagSorting,
 	TagType,
 	ToolbarButtonVisibility
 } from './types';
@@ -519,6 +520,25 @@ class Config {
 	 */
 	get showTags() {
 		return !!this.getRenamedExtensionSetting('repository.showTags', 'showTags', true);
+	}
+
+	/**
+	 * Get the value of the `git-graph.tagSorting` Extension Setting.
+	 */
+	get tagSorting() {
+		const ordering = this.config.get<string>('tagSorting', 'date');
+		return ordering === 'semantic'
+			? TagSorting.Semantic
+			: ordering === 'alpha'
+				? TagSorting.Alphabetical
+				: TagSorting.Date;
+	}
+
+	/**
+	 * Get the value of the `git-graph.maxTags` Extension Setting.
+	 */
+	get maxTags() {
+		return this.config.get<number>('maxTags', 1000);
 	}
 
 	/**

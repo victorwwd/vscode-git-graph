@@ -862,12 +862,12 @@ body.tagLabelsRightAligned .gitRef.tag{
 	z-index:12;
 }
 
-#repoControl, #branchControl, #authorControl, #showRemoteBranchesControl, #simplifyByDecorationControl{
+#repoControl, #branchControl, #authorControl, #tagControl, #showRemoteBranchesControl, #simplifyByDecorationControl{
 	display:inline-block;
 	white-space:nowrap;
 	margin:0 10px;
 }
-#repoDropdown, #branchDropdown, #authorDropdown{
+#repoDropdown, #branchDropdown, #authorDropdown, #tagDropdown{
 	margin-left:3px;
 }
 #showRemoteBranchesControl > .customCheckbox, #simplifyByDecorationControl > .customCheckbox{

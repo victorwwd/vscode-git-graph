@@ -13,6 +13,8 @@ class GitGraphView {
 	private avatars: AvatarImageCollection = {};
 	private currentBranches: string[] | null = null;
 	private currentAuthors: string[] | null = null;
+	private currentTags: string[] | null = null;
+	private lastSelectedTag: string | null = null; // Last selected tag for positioning and highlighting
 
 	private currentRepo!: string;
 	private currentRepoLoading: boolean = true;
@@ -50,6 +52,7 @@ class GitGraphView {
 	private readonly repoDropdown: Dropdown;
 	private readonly branchDropdown: Dropdown;
 	private readonly authorDropdown: Dropdown;
+	private readonly tagDropdown: Dropdown;
 
 	private readonly viewElem: HTMLElement;
 	private readonly controlsElem: HTMLElement;
@@ -103,6 +106,15 @@ class GitGraphView {
 			this.clearCommits();
 			this.requestLoadRepoInfoAndCommits(true, true);
 		}, this.config.singleAuthorSelect);
+		this.tagDropdown = new Dropdown('tagDropdown', false, true, 'Tags', (values) => {
+			this.currentTags = values;
+			this.maxCommits = this.config.initialLoadCommits;
+			this.saveState();
+			this.clearCommits();
+			// Track last selected tag for positioning and highlighting
+			this.lastSelectedTag = values.length > 0 && values[0] !== '' ? values[values.length - 1] : null;
+			this.requestLoadRepoInfoAndCommits(true, true);
+		});
 		this.showRemoteBranchesElem = <HTMLInputElement>document.getElementById('showRemoteBranchesCheckbox')!;
 		this.showRemoteBranchesElem.addEventListener('change', () => {
 			this.saveRepoStateValue(this.currentRepo, 'showRemoteBranchesV2', this.showRemoteBranchesElem.checked ? GG.BooleanOverride.Enabled : GG.BooleanOverride.Disabled);
@@ -139,12 +151,13 @@ class GitGraphView {
 			this.currentRepo = prevState.currentRepo;
 			this.currentBranches = prevState.currentBranches;
 			this.currentAuthors = prevState.currentAuthors;
+			this.currentTags = prevState.currentTags;
 			this.maxCommits = prevState.maxCommits;
 			this.expandedCommit = prevState.expandedCommit;
 			this.avatars = prevState.avatars;
 			this.gitConfig = prevState.gitConfig;
 			this.selectedCommits = new Set(prevState.selectedCommits || []);
-			this.loadRepoInfo(prevState.gitBranches, prevState.gitBranchHead, prevState.gitRemotes, prevState.gitStashes, true);
+			this.loadRepoInfo(prevState.gitBranches, prevState.gitBranchHead, prevState.gitRemotes, prevState.gitStashes, prevState.gitTags, true);
 			this.loadCommits(prevState.commits, prevState.commitHead, prevState.gitTags, prevState.moreCommitsAvailable, prevState.onlyFollowFirstParent);
 			this.findWidget.restoreState(prevState.findWidget);
 			this.settingsWidget.restoreState(prevState.settingsWidget);
@@ -242,6 +255,7 @@ class GitGraphView {
 		this.gitTags = [];
 		this.currentBranches = null;
 		this.currentAuthors = [];
+		this.currentTags = null;
 		this.renderFetchButton();
 		this.closeCommitDetails(false);
 		this.settingsWidget.close();
@@ -249,11 +263,11 @@ class GitGraphView {
 		this.refresh(true);
 	}
 
-	private loadRepoInfo(branchOptions: ReadonlyArray<string>, branchHead: string | null, remotes: ReadonlyArray<string>, stashes: ReadonlyArray<GG.GitStash>, isRepo: boolean) {
+	private loadRepoInfo(branchOptions: ReadonlyArray<string>, branchHead: string | null, remotes: ReadonlyArray<string>, stashes: ReadonlyArray<GG.GitStash>, tags: ReadonlyArray<string>, isRepo: boolean) {
 		// Changes to this.gitStashes are reflected as changes to the commits when loadCommits is run
 		this.gitStashes = stashes;
 
-		if (!isRepo || (!this.currentRepoRefreshState.hard && arraysStrictlyEqual(this.gitBranches, branchOptions) && this.gitBranchHead === branchHead && arraysStrictlyEqual(this.gitRemotes, remotes))) {
+		if (!isRepo || (!this.currentRepoRefreshState.hard && arraysStrictlyEqual(this.gitBranches, branchOptions) && this.gitBranchHead === branchHead && arraysStrictlyEqual(this.gitRemotes, remotes) && arraysStrictlyEqual(this.gitTags, tags))) {
 			this.saveState();
 			this.finaliseLoadRepoInfo(false, isRepo);
 			return;
@@ -263,6 +277,7 @@ class GitGraphView {
 		this.gitBranches = branchOptions;
 		this.gitBranchHead = branchHead;
 		this.gitRemotes = remotes;
+		this.gitTags = tags;
 
 		// Update the state of the fetch button
 		this.renderFetchButton();
@@ -306,6 +321,11 @@ class GitGraphView {
 		// Set up branch dropdown options
 		this.branchDropdown.setOptions(this.getBranchOptions(true), this.currentBranches);
 		this.authorDropdown.setOptions(this.getAuthorOptions(), this.currentAuthors);
+
+		if (this.currentTags === null || this.currentTags.length === 0) {
+			this.currentTags = [''];
+		}
+		this.tagDropdown.setOptions(this.getTagOptions(), this.currentTags);
 
 		// Remove hidden remotes that no longer exist
 		let hiddenRemotes = this.gitRepos[this.currentRepo].hideRemotes;
@@ -413,6 +433,16 @@ class GitGraphView {
 			this.scrollToCommit(this.commitHead, true);
 		}
 
+		// If there's a last selected tag, scroll to and highlight the corresponding commit
+		if (this.lastSelectedTag) {
+			const commitHash = this.findCommitHashByTag(this.lastSelectedTag);
+			if (commitHash) {
+				this.scrollToCommit(commitHash, true, true);
+			}
+			// Clear after positioning to avoid repeated scrolling on refresh
+			this.lastSelectedTag = null;
+		}
+
 		this.finaliseLoadCommits();
 		this.requestAvatars(avatarsNeeded);
 	}
@@ -498,7 +528,7 @@ class GitGraphView {
 		if (msg.error === null) {
 			const refreshState = this.currentRepoRefreshState;
 			if (refreshState.inProgress && refreshState.loadRepoInfoRefreshId === msg.refreshId) {
-				this.loadRepoInfo(msg.branches, msg.head, msg.remotes, msg.stashes, msg.isRepo);
+				this.loadRepoInfo(msg.branches, msg.head, msg.remotes, msg.stashes, msg.tags, msg.isRepo);
 			}
 		} else {
 			this.displayLoadDataError('Unable to load Repository Info', msg.error);
@@ -581,6 +611,13 @@ class GitGraphView {
 				const author = this!.gitConfig!.authors[i];
 				options.push({ name: author.name, value: author.name });
 			}
+		}
+		return options;
+	}
+	public getTagOptions(): ReadonlyArray<DialogSelectInputOption> {
+		const options: DialogSelectInputOption[] = [{ name: 'All', value: SHOW_ALL_BRANCHES }];
+		for (const tag of this.gitTags) {
+			options.push({ name: tag, value: tag });
 		}
 		return options;
 	}
@@ -669,6 +706,7 @@ class GitGraphView {
 			refreshId: ++this.currentRepoRefreshState.loadCommitsRefreshId,
 			branches: this.currentBranches === null || (this.currentBranches.length === 1 && this.currentBranches[0] === SHOW_ALL_BRANCHES) ? null : this.currentBranches,
 			authors: this.currentAuthors === null || (this.currentAuthors.length === 1 && this.currentAuthors[0] === SHOW_ALL_BRANCHES) ? null : this.currentAuthors,
+			tags: this.currentTags === null || (this.currentTags.length === 1 && this.currentTags[0] === SHOW_ALL_BRANCHES) ? null : this.currentTags,
 			maxCommits: this.maxCommits,
 			showTags: getShowTags(repoState.showTags),
 			showRemoteBranches: getShowRemoteBranches(repoState.showRemoteBranchesV2),
@@ -784,6 +822,7 @@ class GitGraphView {
 			avatars: this.avatars,
 			currentBranches: this.currentBranches,
 			currentAuthors: this.currentAuthors,
+			currentTags: this.currentTags,
 			moreCommitsAvailable: this.moreCommitsAvailable,
 			maxCommits: this.maxCommits,
 			onlyFollowFirstParent: this.onlyFollowFirstParent,
@@ -2349,6 +2388,23 @@ class GitGraphView {
 	private getNumColumns() {
 		let colVisibility = this.getColumnVisibility();
 		return 2 + (colVisibility.date ? 1 : 0) + (colVisibility.author ? 1 : 0) + (colVisibility.commit ? 1 : 0);
+	}
+
+	/**
+	 * Find the commit hash associated with a tag name.
+	 * @param tagName The name of the tag to find.
+	 * @returns The hash of the commit that has this tag, or null if not found.
+	 */
+	private findCommitHashByTag(tagName: string): string | null {
+		for (let i = 0; i < this.commits.length; i++) {
+			const commit = this.commits[i];
+			for (let j = 0; j < commit.tags.length; j++) {
+				if (commit.tags[j].name === tagName) {
+					return commit.hash;
+				}
+			}
+		}
+		return null;
 	}
 
 	/**
