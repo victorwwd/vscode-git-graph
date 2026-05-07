@@ -1581,6 +1581,29 @@ class GitGraphView {
 			});
 		}
 
+		// Copy options
+		multiSelectActions.push({
+			title: 'Copy Selected Commit Hashes to Clipboard',
+			visible: visibility.copyHash,
+			onClick: () => {
+				const hashes = this.getSelectedCommitsArray().join('\n');
+				sendMessage({ command: 'copyToClipboard', type: 'Commit Hashes', data: hashes });
+			}
+		});
+
+		multiSelectActions.push({
+			title: 'Copy Selected Commit Messages to Clipboard',
+			visible: visibility.copySubject,
+			onClick: () => {
+				const selectedHashes = this.getSelectedCommitsArray();
+				const messages = selectedHashes.map(hash => {
+					const commit = this.commits[this.commitLookup[hash]];
+					return commit.message;
+				}).join('\n');
+				sendMessage({ command: 'copyToClipboard', type: 'Commit Messages', data: messages });
+			}
+		});
+
 		return multiSelectActions.length > 0 ? [multiSelectActions] : [];
 	}
 
