@@ -67,11 +67,13 @@ Step 2: Review the [Codebase Outline](https://github.com/hansu/vscode-git-graph/
 
 Step 3: To compile the code, run the appropriate npm script in the Visual Studio Code terminal as follows:
 * `npm run compile`: Compiles both front and backend code
-* `npm run compile-src`: Compiles the backend code only
+* `npm run compile-src`: Compiles the backend code only (uses esbuild for bundling + tsc for type definitions)
 * `npm run compile-web`: Compiles the frontend code only, with minification.
 * `npm run compile-web-debug`: Compiles the frontend code, without minification.
 
 _Note: When you first open the codebase, you'll need to run `npm run compile-src` so that the types defined by the backend are made available for the frontend to use, otherwise there will be a number of type errors in the frontend code. Similarly, if you make a change to the backend types that you also want to use in the frontend via the GG namespace, you'll need to run `npm run compile-src` before they can be used._
+
+_Note: The backend is bundled using esbuild, which inlines dependencies like `iconv-lite` into a single file. This reduces the VSIX package size and eliminates the need to include `node_modules` in the distributed extension._
 
 Step 4: To quickly test your changes:
 * Pressing F5 launches the Extension Development Host in a new window, overriding the installed version of Git Graph with the version compiled in Step 3. You can:
