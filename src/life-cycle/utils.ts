@@ -68,7 +68,7 @@ export function generateNonce() {
  * @returns The path of the directory.
  */
 export function getDataDirectory() {
-	return path.join(__dirname, 'data');
+	return path.join(__dirname, 'life-cycle', 'data');
 }
 
 /**

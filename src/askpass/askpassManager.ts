@@ -31,6 +31,7 @@ export class AskpassManager extends Disposable {
 	private ipcHandlePath: string;
 	private server: http.Server;
 	private enabled = true;
+	private readonly askpassDir = path.join(__dirname, 'askpass');
 
 	constructor() {
 		super();
@@ -42,8 +43,8 @@ export class AskpassManager extends Disposable {
 		} catch (err) {
 			this.enabled = false;
 		}
-		fs.chmod(path.join(__dirname, 'askpass.sh'), '755', () => { });
-		fs.chmod(path.join(__dirname, 'askpass-empty.sh'), '755', () => { });
+		fs.chmod(path.join(this.askpassDir, 'askpass.sh'), '755', () => { });
+		fs.chmod(path.join(this.askpassDir, 'askpass-empty.sh'), '755', () => { });
 
 		this.registerDisposable(
 			// Close the Askpass Server
@@ -78,13 +79,13 @@ export class AskpassManager extends Disposable {
 		return this.enabled
 			? {
 				ELECTRON_RUN_AS_NODE: '1',
-				GIT_ASKPASS: path.join(__dirname, 'askpass.sh'),
+				GIT_ASKPASS: path.join(this.askpassDir, 'askpass.sh'),
 				VSCODE_GIT_GRAPH_ASKPASS_NODE: process.execPath,
-				VSCODE_GIT_GRAPH_ASKPASS_MAIN: path.join(__dirname, 'askpassMain.js'),
+				VSCODE_GIT_GRAPH_ASKPASS_MAIN: path.join(this.askpassDir, 'askpassMain.js'),
 				VSCODE_GIT_GRAPH_ASKPASS_HANDLE: this.ipcHandlePath
 			}
 			: {
-				GIT_ASKPASS: path.join(__dirname, 'askpass-empty.sh')
+				GIT_ASKPASS: path.join(this.askpassDir, 'askpass-empty.sh')
 			};
 	}
 }

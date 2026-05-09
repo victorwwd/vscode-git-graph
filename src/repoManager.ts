@@ -791,6 +791,8 @@ export namespace ExternalRepoConfig {
 		showRemoteBranches?: boolean;
 		showStashes?: boolean;
 		showTags?: boolean;
+		simplifyByDecoration?: boolean;
+		isCdvSummaryHidden?: boolean;
 		exportedAt?: number;
 	}
 
@@ -913,6 +915,12 @@ function generateExternalConfigFile(state: GitRepoState): Readonly<ExternalRepoC
 	if (state.showTags !== BooleanOverride.Default) {
 		file.showTags = state.showTags === BooleanOverride.Enabled;
 	}
+	if (state.simplifyByDecoration !== BooleanOverride.Default) {
+		file.simplifyByDecoration = state.simplifyByDecoration === BooleanOverride.Enabled;
+	}
+	if (state.isCdvSummaryHidden) {
+		file.isCdvSummaryHidden = true;
+	}
 	file.exportedAt = (new Date()).getTime();
 	return file;
 }
@@ -979,6 +987,12 @@ function validateExternalConfigFile(file: Readonly<ExternalRepoConfig.File>) {
 	}
 	if (typeof file.showTags !== 'undefined' && typeof file.showTags !== 'boolean') {
 		return 'showTags';
+	}
+	if (typeof file.simplifyByDecoration !== 'undefined' && typeof file.simplifyByDecoration !== 'boolean') {
+		return 'simplifyByDecoration';
+	}
+	if (typeof file.isCdvSummaryHidden !== 'undefined' && typeof file.isCdvSummaryHidden !== 'boolean') {
+		return 'isCdvSummaryHidden';
 	}
 	return null;
 }
@@ -1069,5 +1083,11 @@ function applyExternalConfigFile(file: Readonly<ExternalRepoConfig.File>, state:
 	}
 	if (typeof file.showTags !== 'undefined') {
 		state.showTags = file.showTags ? BooleanOverride.Enabled : BooleanOverride.Disabled;
+	}
+	if (typeof file.simplifyByDecoration !== 'undefined') {
+		state.simplifyByDecoration = file.simplifyByDecoration ? BooleanOverride.Enabled : BooleanOverride.Disabled;
+	}
+	if (typeof file.isCdvSummaryHidden !== 'undefined') {
+		state.isCdvSummaryHidden = file.isCdvSummaryHidden;
 	}
 }

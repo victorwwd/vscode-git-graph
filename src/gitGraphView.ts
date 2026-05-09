@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import * as path from 'path';
 import { AvatarManager } from './avatarManager';
 import { BaseGitGraphView } from './baseGitGraphView';
 import { getConfig } from './config';
@@ -71,7 +72,7 @@ export class GitGraphView extends BaseGitGraphView {
 		const config = getConfig();
 		this.panel = vscode.window.createWebviewPanel('git-graph', 'Git Graph', column || vscode.ViewColumn.One, {
 			enableScripts: true,
-			localResourceRoots: [vscode.Uri.file(extensionPath + '/media')],
+			localResourceRoots: [vscode.Uri.file(path.join(extensionPath, 'media'))],
 			retainContextWhenHidden: config.retainContextWhenHidden
 		});
 		this.panel.iconPath = config.tabIconColourTheme === TabIconColourTheme.Colour

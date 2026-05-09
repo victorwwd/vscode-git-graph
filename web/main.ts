@@ -147,7 +147,7 @@ class GitGraphView {
 		this.observeUrls();
 		this.observeTableEvents();
 
-		if (prevState && !prevState.currentRepoLoading && typeof this.gitRepos[prevState.currentRepo] !== 'undefined') {
+		if (prevState && !prevState.currentRepoLoading && Object.prototype.hasOwnProperty.call(this.gitRepos, prevState.currentRepo)) {
 			this.currentRepo = prevState.currentRepo;
 			this.currentBranches = prevState.currentBranches;
 			this.currentAuthors = prevState.currentAuthors;
@@ -210,10 +210,10 @@ class GitGraphView {
 		this.saveState();
 
 		let newRepo: string;
-		if (loadViewTo !== null && this.currentRepo !== loadViewTo.repo && typeof repos[loadViewTo.repo] !== 'undefined') {
+		if (loadViewTo !== null && this.currentRepo !== loadViewTo.repo && Object.prototype.hasOwnProperty.call(repos, loadViewTo.repo)) {
 			newRepo = loadViewTo.repo;
-		} else if (typeof repos[this.currentRepo] === 'undefined') {
-			newRepo = lastActiveRepo !== null && typeof repos[lastActiveRepo] !== 'undefined'
+		} else if (!Object.prototype.hasOwnProperty.call(repos, this.currentRepo)) {
+			newRepo = lastActiveRepo !== null && Object.prototype.hasOwnProperty.call(repos, lastActiveRepo)
 				? lastActiveRepo
 				: getSortedRepositoryPaths(repos, this.config.repoDropdownOrder)[0];
 		} else {
@@ -637,7 +637,7 @@ class GitGraphView {
 	private getPushRemote(branch: string | null = null) {
 		const possibleRemotes = [];
 		if (this.gitConfig !== null) {
-			if (branch !== null && typeof this.gitConfig.branches[branch] !== 'undefined') {
+			if (branch !== null && Object.prototype.hasOwnProperty.call(this.gitConfig.branches, branch)) {
 				possibleRemotes.push(this.gitConfig.branches[branch].pushRemote, this.gitConfig.branches[branch].remote);
 			}
 			possibleRemotes.push(this.gitConfig.pushDefault);
@@ -663,7 +663,7 @@ class GitGraphView {
 	}
 
 	public getRepoState(repo: string): Readonly<GG.GitRepoState> | null {
-		return typeof this.gitRepos[repo] !== 'undefined'
+		return Object.prototype.hasOwnProperty.call(this.gitRepos, repo)
 			? this.gitRepos[repo]
 			: null;
 	}
@@ -1485,7 +1485,7 @@ class GitGraphView {
 							setUpstream: setUpstream,
 							mode: <GG.GitPushBranchMode>values[2],
 							noVerify: noVerify,
-							willUpdateBranchConfig: setUpstream && remotes.length > 0 && (this.gitConfig === null || typeof this.gitConfig.branches[refName] === 'undefined' || this.gitConfig.branches[refName].remote !== remotes[remotes.length - 1])
+							willUpdateBranchConfig: setUpstream && remotes.length > 0 && (this.gitConfig === null || !Object.prototype.hasOwnProperty.call(this.gitConfig.branches, refName) || this.gitConfig.branches[refName].remote !== remotes[remotes.length - 1])
 						}, 'Pushing Branch');
 					}, target);
 				}
@@ -3063,7 +3063,7 @@ class GitGraphView {
 			absPath = this.currentRepo;
 			for (j = 0; j < path.length; j++) {
 				absPath += '/' + path[j];
-				if (typeof this.gitRepos[absPath] !== 'undefined') {
+				if (Object.prototype.hasOwnProperty.call(this.gitRepos, absPath)) {
 					if (!Object.prototype.hasOwnProperty.call(cur.contents, path[j])) {
 						cur.contents[path[j]] = { type: 'repo', name: path[j], path: absPath };
 					}
@@ -4486,7 +4486,11 @@ function sortFolderKeys(folder: FileTreeFolder) {
 function getChildByPathSegment(folder: FileTreeFolder, pathSeg: string) {
 	let cur: FileTreeNode = folder, comps = pathSeg.split('/');
 	for (let i = 0; i < comps.length; i++) {
-		cur = (<FileTreeFolder>cur).contents[comps[i]];
+		if (Object.prototype.hasOwnProperty.call((<FileTreeFolder>cur).contents, comps[i])) {
+			cur = (<FileTreeFolder>cur).contents[comps[i]];
+		} else {
+			return <FileTreeNode>{ type: 'file', name: '', index: -1, reviewed: false };
+		}
 	}
 	return cur;
 }
