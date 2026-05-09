@@ -21,52 +21,6 @@ interface WebviewPanelMocks {
 
 let mockedWebviews: { panel: vscode.WebviewPanel, mocks: WebviewPanelMocks }[] = [];
 
-export const mocks = {
-	extensionContext: {
-		asAbsolutePath: jest.fn(),
-		extensionPath: '/path/to/extension',
-		globalState: {
-			get: jest.fn(),
-			update: jest.fn()
-		},
-		globalStoragePath: '/path/to/globalStorage',
-		logPath: '/path/to/logs',
-		storagePath: '/path/to/storage',
-		subscriptions: [],
-		workspaceState: {
-			get: jest.fn(),
-			update: jest.fn()
-		}
-	},
-	outputChannel: {
-		appendLine: jest.fn(),
-		dispose: jest.fn()
-	},
-	statusBarItem: {
-		text: '',
-		tooltip: '',
-		command: '',
-		show: jest.fn(),
-		hide: jest.fn(),
-		dispose: jest.fn()
-	},
-	terminal: {
-		sendText: jest.fn(),
-		show: jest.fn()
-	},
-	workspaceConfiguration: {
-		get: jest.fn((section: string, defaultValue?: any) => {
-			return typeof mockedExtensionSettingValues[section] !== 'undefined'
-				? mockedExtensionSettingValues[section]
-				: defaultValue;
-		}),
-		inspect: jest.fn((section: string) => ({
-			workspaceValue: mockedExtensionSettingValues[section],
-			globalValue: mockedExtensionSettingValues[section]
-		}))
-	}
-};
-
 
 /* Visual Studio Code API Mocks */
 
@@ -156,6 +110,73 @@ export enum ViewColumn {
 	Nine = 9
 }
 
+export enum ExtensionMode {
+	Production = 1,
+	Development = 2,
+	Test = 3
+}
+
+export const mocks = {
+	extensionContext: {
+		asAbsolutePath: jest.fn(),
+		extensionPath: '/path/to/extension',
+		extensionUri: Uri.file('/path/to/extension'),
+		extensionMode: ExtensionMode.Test,
+		globalState: {
+			get: jest.fn(<T>(_key: string, defaultValue?: T): T | undefined => defaultValue),
+			update: jest.fn((_key: string, _value: any): Thenable<void> => Promise.resolve())
+		},
+		globalStoragePath: '/path/to/globalStorage',
+		globalStorageUri: Uri.file('/path/to/globalStorage'),
+		logPath: '/path/to/logs',
+		logUri: Uri.file('/path/to/logs'),
+		storagePath: '/path/to/storage',
+		storageUri: Uri.file('/path/to/storage'),
+		environmentVariableCollection: {
+			persistent: true,
+			replace: jest.fn(),
+			append: jest.fn(),
+			prepend: jest.fn(),
+			get: jest.fn(),
+			delete: jest.fn(),
+			clear: jest.fn(),
+			forEach: jest.fn()
+		},
+		subscriptions: [],
+		workspaceState: {
+			get: jest.fn(<T>(_key: string, defaultValue?: T): T | undefined => defaultValue),
+			update: jest.fn((_key: string, _value: any): Thenable<void> => Promise.resolve())
+		}
+	},
+	outputChannel: {
+		appendLine: jest.fn(),
+		dispose: jest.fn()
+	},
+	statusBarItem: {
+		text: '',
+		tooltip: '',
+		command: '',
+		show: jest.fn(),
+		hide: jest.fn(),
+		dispose: jest.fn()
+	},
+	terminal: {
+		sendText: jest.fn(),
+		show: jest.fn()
+	},
+	workspaceConfiguration: {
+		get: jest.fn((section: string, defaultValue?: any) => {
+			return typeof mockedExtensionSettingValues[section] !== 'undefined'
+				? mockedExtensionSettingValues[section]
+				: defaultValue;
+		}),
+		inspect: jest.fn((section: string) => ({
+			workspaceValue: mockedExtensionSettingValues[section],
+			globalValue: mockedExtensionSettingValues[section]
+		}))
+	}
+};
+
 export const window = {
 	activeTextEditor: undefined as any,
 	createOutputChannel: jest.fn(() => mocks.outputChannel),
@@ -179,6 +200,7 @@ export const workspace = {
 	getConfiguration: jest.fn(() => mocks.workspaceConfiguration),
 	onDidChangeWorkspaceFolders: jest.fn((_: () => Promise<void>) => ({ dispose: jest.fn() })),
 	onDidCloseTextDocument: jest.fn((_: () => void) => ({ dispose: jest.fn() })),
+	onDidChangeConfiguration: jest.fn((_: () => void) => ({ dispose: jest.fn() })),
 	workspaceFolders: <{ uri: Uri, index: number }[] | undefined>undefined
 };
 

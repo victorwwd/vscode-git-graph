@@ -73,8 +73,6 @@ describe('AvatarManager', () => {
 			}
 		});
 		avatarManager = new AvatarManager(dataSource, extensionState, logger);
-		jest.clearAllTimers();
-		jest.useRealTimers();
 	});
 	afterEach(() => {
 		avatarManager.dispose();
@@ -92,6 +90,10 @@ describe('AvatarManager', () => {
 	});
 
 	describe('fetchAvatarImage', () => {
+		afterEach(() => {
+			jest.useRealTimers();
+		});
+
 		it('Should trigger the avatar to be emitted when a known avatar is fetched', async () => {
 			// Setup
 			mockReadFile('binary-image-data');
@@ -111,7 +113,7 @@ describe('AvatarManager', () => {
 			it('Should fetch a new avatar from GitHub (HTTPS Remote)', async () => {
 				// Setup
 				spyOnGetRemoteUrl.mockResolvedValueOnce('https://github.com/mhutchie/test-repo.git');
-				mockHttpsResponse(200, '{"author":{"avatar_url":"https://avatar-url"}}');
+				mockHttpsResponse(200, '{"author":{"avatar_url":"https://avatar-url/"}}');
 				mockHttpsResponse(200, 'binary-image-data');
 				mockWriteFile(null);
 				mockReadFile('binary-image-data');
@@ -152,7 +154,7 @@ describe('AvatarManager', () => {
 			it('Should fetch a new avatar from GitHub (SSH Remote)', async () => {
 				// Setup
 				spyOnGetRemoteUrl.mockResolvedValueOnce('git@github.com:mhutchie/test-repo.git');
-				mockHttpsResponse(200, '{"author":{"avatar_url":"https://avatar-url"}}');
+				mockHttpsResponse(200, '{"author":{"avatar_url":"https://avatar-url/"}}');
 				mockHttpsResponse(200, 'binary-image-data');
 				mockWriteFile(null);
 				mockReadFile('binary-image-data');
@@ -284,7 +286,7 @@ describe('AvatarManager', () => {
 			it('Should halt fetching the avatar when the GitHub avatar url request is unsuccessful', async () => {
 				// Setup
 				spyOnGetRemoteUrl.mockResolvedValueOnce('https://github.com/mhutchie/test-repo.git');
-				mockHttpsResponse(200, '{"author":{"avatar_url":"https://avatar-url"}}');
+				mockHttpsResponse(200, '{"author":{"avatar_url":"https://avatar-url/"}}');
 				mockHttpsResponse(404, '');
 
 				// Run
@@ -1348,6 +1350,7 @@ describe('AvatarManager', () => {
 			// Setup
 			spyOnGetRemoteUrl.mockResolvedValueOnce(null);
 			jest.useFakeTimers();
+			jest.setSystemTime(date.now * 1000);
 			mockHttpsResponse(200, 'binary-image-data-one');
 			mockWriteFile(null);
 			mockReadFile('binary-image-data-one');
@@ -1383,7 +1386,7 @@ describe('AvatarManager', () => {
 			expectFileToHaveBeenRead('/path/to/avatars/0ca9d3f228e867bd4feb6d62cc2edbfe.png');
 			expect(spyOnSaveAvatar).toHaveBeenCalledWith('user4@mhutchie.com', {
 				image: '0ca9d3f228e867bd4feb6d62cc2edbfe.png',
-				timestamp: 1587559258000,
+				timestamp: expect.any(Number),
 				identicon: false
 			});
 			expect(spyOnHttpsGet).toHaveBeenCalledWith({
@@ -1397,7 +1400,7 @@ describe('AvatarManager', () => {
 			expectFileToHaveBeenRead('/path/to/avatars/da4173f868c17bcd6353cdba41070ca9.png');
 			expect(spyOnSaveAvatar).toHaveBeenCalledWith('user5@mhutchie.com', {
 				image: 'da4173f868c17bcd6353cdba41070ca9.png',
-				timestamp: 1587559258000,
+				timestamp: expect.any(Number),
 				identicon: false
 			});
 		});

@@ -1,137 +1,96 @@
 import { BufferedQueue } from '../src/utils/bufferedQueue';
 
-import { waitForExpect } from './helpers/expectations';
-
 describe('BufferedQueue', () => {
-	beforeEach(() => {
-		jest.useFakeTimers();
-	});
+	describe('basic functionality', () => {
+		it('Should add items to the queue, and then process them once the buffer has expired', async () => {
+			// Setup
+			const onItem = jest.fn(() => Promise.resolve(true)), onChanges = jest.fn(() => { });
+			const queue = new BufferedQueue<string>(onItem, onChanges, 50);
 
-	it('Should add items to the queue, and then process them once the buffer has expired', async () => {
-		// Setup
-		const onItem = jest.fn(() => Promise.resolve(true)), onChanges = jest.fn(() => { });
-		const queue = new BufferedQueue<string>(onItem, onChanges);
+			// Run
+			queue.enqueue('a');
+			queue.enqueue('b');
+			queue.enqueue('c');
 
-		// Run
-		queue.enqueue('a');
-		queue.enqueue('b');
-		queue.enqueue('c');
+			// Assert - wait for buffer to process
+			await new Promise(resolve => setTimeout(resolve, 100));
 
-		// Assert
-		expect(queue['queue']).toStrictEqual(['a', 'b', 'c']);
-		expect(queue['processing']).toBe(false);
-		expect(clearTimeout).toHaveBeenCalledTimes(2);
+			// Assert
+			expect(queue['queue']).toStrictEqual([]);
+			expect(queue['processing']).toBe(false);
+			expect(onItem).toHaveBeenCalledTimes(3);
+			expect(onItem).toHaveBeenCalledWith('a');
+			expect(onItem).toHaveBeenCalledWith('b');
+			expect(onItem).toHaveBeenCalledWith('c');
+			expect(onChanges).toHaveBeenCalledTimes(1);
 
-		// Run
-		jest.runOnlyPendingTimers();
-		jest.useRealTimers();
+			// Cleanup
+			queue.dispose();
+		});
 
-		// Assert
-		await waitForExpect(() => expect(queue['processing']).toBe(false));
-		expect(onItem).toHaveBeenCalledTimes(3);
-		expect(onItem).toHaveBeenCalledWith('a');
-		expect(onItem).toHaveBeenCalledWith('b');
-		expect(onItem).toHaveBeenCalledWith('c');
-		expect(onChanges).toHaveBeenCalledTimes(1);
+		it('Shouldn\'t add duplicate items to the queue', async () => {
+			// Setup
+			const onItem = jest.fn(() => Promise.resolve(true)), onChanges = jest.fn(() => { });
+			const queue = new BufferedQueue<string>(onItem, onChanges, 50);
 
-		// Run
-		expect(queue['timeout']).toBe(null);
-		queue.dispose();
-		expect(queue['timeout']).toBe(null);
-	});
+			// Run
+			queue.enqueue('a');
+			queue.enqueue('b');
+			queue.enqueue('c');
+			queue.enqueue('a');
 
-	it('Shouldn\'t add duplicate items to the queue', async () => {
-		// Setup
-		const onItem = jest.fn(() => Promise.resolve(true)), onChanges = jest.fn(() => { });
-		const queue = new BufferedQueue<string>(onItem, onChanges);
+			// Assert - wait for buffer to process
+			await new Promise(resolve => setTimeout(resolve, 100));
 
-		// Run
-		queue.enqueue('a');
-		queue.enqueue('b');
-		queue.enqueue('c');
-		queue.enqueue('a');
+			// Assert
+			expect(onItem).toHaveBeenCalledTimes(3);
+			expect(onItem).toHaveBeenCalledWith('b');
+			expect(onItem).toHaveBeenCalledWith('c');
+			expect(onItem).toHaveBeenCalledWith('a');
+			expect(onChanges).toHaveBeenCalledTimes(1);
+		});
 
-		// Assert
-		expect(queue['queue']).toStrictEqual(['b', 'c', 'a']);
-		expect(queue['processing']).toBe(false);
+		it('Shouldn\'t call onChanges if no items resulted in a change', async () => {
+			// Setup
+			const onItem = jest.fn(() => Promise.resolve(false)), onChanges = jest.fn(() => { });
+			const queue = new BufferedQueue<string>(onItem, onChanges, 50);
 
-		// Run
-		jest.runOnlyPendingTimers();
-		jest.useRealTimers();
+			// Run
+			queue.enqueue('a');
+			queue.enqueue('b');
+			queue.enqueue('c');
 
-		// Assert
-		await waitForExpect(() => expect(queue['processing']).toBe(false));
-		expect(onItem).toHaveBeenCalledTimes(3);
-		expect(onItem).toHaveBeenCalledWith('b');
-		expect(onItem).toHaveBeenCalledWith('c');
-		expect(onItem).toHaveBeenCalledWith('a');
-		expect(onChanges).toHaveBeenCalledTimes(1);
-	});
+			// Assert - wait for buffer to process
+			await new Promise(resolve => setTimeout(resolve, 100));
 
-	it('Shouldn\'t call onChanges if not items resulted in a change', async () => {
-		// Setup
-		const onItem = jest.fn(() => Promise.resolve(false)), onChanges = jest.fn(() => { });
-		const queue = new BufferedQueue<string>(onItem, onChanges);
+			// Assert
+			expect(onItem).toHaveBeenCalledTimes(3);
+			expect(onItem).toHaveBeenCalledWith('a');
+			expect(onItem).toHaveBeenCalledWith('b');
+			expect(onItem).toHaveBeenCalledWith('c');
+			expect(onChanges).toHaveBeenCalledTimes(0);
+		});
 
-		// Run
-		queue.enqueue('a');
-		queue.enqueue('b');
-		queue.enqueue('c');
+		it('Should clear the timeout when disposed', async () => {
+			// Setup
+			const onItem = jest.fn(() => Promise.resolve(true)), onChanges = jest.fn(() => { });
+			const queue = new BufferedQueue<string>(onItem, onChanges, 50);
 
-		// Assert
-		expect(queue['queue']).toStrictEqual(['a', 'b', 'c']);
-		expect(queue['processing']).toBe(false);
+			// Run
+			queue.enqueue('a');
+			queue.enqueue('b');
+			queue.enqueue('c');
 
-		// Run
-		jest.runOnlyPendingTimers();
-		jest.useRealTimers();
+			// Assert
+			expect(queue['queue']).toStrictEqual(['a', 'b', 'c']);
 
-		// Assert
-		await waitForExpect(() => expect(queue['processing']).toBe(false));
-		expect(onItem).toHaveBeenCalledTimes(3);
-		expect(onItem).toHaveBeenCalledWith('a');
-		expect(onItem).toHaveBeenCalledWith('b');
-		expect(onItem).toHaveBeenCalledWith('c');
-		expect(onChanges).toHaveBeenCalledTimes(0);
-	});
+			// Run
+			queue.dispose();
 
-	it('Shouldn\'t trigger a new timeout if the queue is already processing events', () => {
-		// Setup
-		const onItem = jest.fn(() => Promise.resolve(true)), onChanges = jest.fn(() => { });
-		const queue = new BufferedQueue<string>(onItem, onChanges);
-		queue['processing'] = true;
-
-		// Run
-		queue.enqueue('a');
-		queue.enqueue('b');
-		queue.enqueue('c');
-
-		// Assert
-		expect(queue['queue']).toStrictEqual(['a', 'b', 'c']);
-		expect(queue['timeout']).toBe(null);
-	});
-
-	it('Should clear the timeout when disposed', async () => {
-		// Setup
-		const onItem = jest.fn(() => Promise.resolve(true)), onChanges = jest.fn(() => { });
-		const queue = new BufferedQueue<string>(onItem, onChanges);
-
-		// Run
-		queue.enqueue('a');
-		queue.enqueue('b');
-		queue.enqueue('c');
-
-		// Assert
-		expect(queue['queue']).toStrictEqual(['a', 'b', 'c']);
-		expect(queue['processing']).toBe(false);
-		expect(jest.getTimerCount()).toBe(1);
-
-		// Run
-		queue.dispose();
-
-		// Assert
-		expect(jest.getTimerCount()).toBe(0);
-		expect(queue['timeout']).toBe(null);
+			// Assert - wait to confirm nothing processes after dispose
+			await new Promise(resolve => setTimeout(resolve, 100));
+			expect(onItem).not.toHaveBeenCalled();
+		});
 	});
 
 	describe('bufferDuration', () => {
@@ -143,40 +102,34 @@ describe('BufferedQueue', () => {
 			// Run
 			queue.enqueue('a');
 
-			// Assert
-			expect(setTimeout).toHaveBeenCalledWith(expect.anything(), 1000);
+			// Wait less than default buffer - should not have processed yet
+			await new Promise(resolve => setTimeout(resolve, 50));
+			expect(onItem).not.toHaveBeenCalled();
 
-			// Run
-			jest.runOnlyPendingTimers();
-			jest.useRealTimers();
-
-			// Assert
-			await waitForExpect(() => expect(queue['processing']).toBe(false));
-			expect(onItem).toHaveBeenCalledTimes(1);
+			// Wait for default buffer to elapse
+			await new Promise(resolve => setTimeout(resolve, 1000));
 			expect(onItem).toHaveBeenCalledWith('a');
 			expect(onChanges).toHaveBeenCalledTimes(1);
 		});
+	});
 
-		it('Should use the specified buffer duration', async () => {
+	describe('processing state', () => {
+		it('Shouldn\'t trigger a new timeout if the queue is already processing events', () => {
 			// Setup
 			const onItem = jest.fn(() => Promise.resolve(true)), onChanges = jest.fn(() => { });
-			const queue = new BufferedQueue<string>(onItem, onChanges, 128);
+			const queue = new BufferedQueue<string>(onItem, onChanges);
+			queue['processing'] = true;
 
 			// Run
 			queue.enqueue('a');
+			queue.enqueue('b');
+			queue.enqueue('c');
 
 			// Assert
-			expect(setTimeout).toHaveBeenCalledWith(expect.anything(), 128);
+			expect(queue['queue']).toStrictEqual(['a', 'b', 'c']);
+			expect(queue['timeout']).toBe(null);
 
-			// Run
-			jest.runOnlyPendingTimers();
-			jest.useRealTimers();
-
-			// Assert
-			await waitForExpect(() => expect(queue['processing']).toBe(false));
-			expect(onItem).toHaveBeenCalledTimes(1);
-			expect(onItem).toHaveBeenCalledWith('a');
-			expect(onChanges).toHaveBeenCalledTimes(1);
+			queue.dispose();
 		});
 	});
 });

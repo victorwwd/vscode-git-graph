@@ -25,6 +25,8 @@ let logger: Logger;
 let spyOnSpawn: jest.SpyInstance, spyOnLog: jest.SpyInstance, spyOnLogError: jest.SpyInstance;
 
 beforeAll(() => {
+	// Ensure real timers and Date are available
+	jest.useRealTimers();
 	onDidChangeConfiguration = new EventEmitter<ConfigurationChangeEvent>();
 	onDidChangeGitExecutable = new EventEmitter<utils.GitExecutable>();
 	logger = new Logger();
@@ -43,9 +45,11 @@ afterAll(() => {
 describe('DataSource', () => {
 	let dataSource: DataSource;
 	beforeEach(() => {
+		jest.useRealTimers();
 		dataSource = new DataSource({ path: '/path/to/git', version: '2.25.0' }, onDidChangeConfiguration.subscribe, onDidChangeGitExecutable.subscribe, logger);
 	});
 	afterEach(() => {
+		jest.useRealTimers();
 		dataSource.dispose();
 	});
 
@@ -156,6 +160,7 @@ describe('DataSource', () => {
 				'98adab72e57a098a45cc36e43a6c0fda95c44f8bXX7Nal-YARtTpjCikii9nJxER19D6diSyk-AWkPbb30d6d4d14462e09515df02a8635e83b4278c8b1 26970361eca306caa6d6bed3baf022dbd8fa404cXX7Nal-YARtTpjCikii9nJxER19D6diSyk-AWkPbrefs/stash@{0}XX7Nal-YARtTpjCikii9nJxER19D6diSyk-AWkPbTest AuthorXX7Nal-YARtTpjCikii9nJxER19D6diSyk-AWkPbtest@mhutchie.comXX7Nal-YARtTpjCikii9nJxER19D6diSyk-AWkPb1592306634XX7Nal-YARtTpjCikii9nJxER19D6diSyk-AWkPbWIP on develop: b30d6d4 y\n' +
 				'0fc3e571c275213de2b3bca9c85e852323056121XX7Nal-YARtTpjCikii9nJxER19D6diSyk-AWkPb9157723d0856bd828800ff185ee72658ee51d19f d45009bc4224537e97b0e52883ea7ae657928fcf 9d81ce0a6cf64b6651bacd7a6c3a6ca90fd63235XX7Nal-YARtTpjCikii9nJxER19D6diSyk-AWkPbrefs/stash@{1}XX7Nal-YARtTpjCikii9nJxER19D6diSyk-AWkPbTest AuthorXX7Nal-YARtTpjCikii9nJxER19D6diSyk-AWkPbtest@mhutchie.comXX7Nal-YARtTpjCikii9nJxER19D6diSyk-AWkPb1592135134XX7Nal-YARtTpjCikii9nJxER19D6diSyk-AWkPbWIP on master: 9157723 y\n'
 			);
+			mockGitSuccessOnce('');
 			vscode.mockExtensionSettingReturnValue('repository.showRemoteHeads', true);
 
 			// Run
@@ -188,11 +193,13 @@ describe('DataSource', () => {
 						untrackedFilesHash: '9d81ce0a6cf64b6651bacd7a6c3a6ca90fd63235'
 					}
 				],
+				tags: [],
 				error: null
 			});
 			expect(spyOnSpawn).toBeCalledWith('/path/to/git', ['branch', '-a', '--no-color'], expect.objectContaining({ cwd: '/path/to/repo' }));
 			expect(spyOnSpawn).toBeCalledWith('/path/to/git', ['remote'], expect.objectContaining({ cwd: '/path/to/repo' }));
 			expect(spyOnSpawn).toBeCalledWith('/path/to/git', ['reflog', '--format=%HXX7Nal-YARtTpjCikii9nJxER19D6diSyk-AWkPb%PXX7Nal-YARtTpjCikii9nJxER19D6diSyk-AWkPb%gDXX7Nal-YARtTpjCikii9nJxER19D6diSyk-AWkPb%anXX7Nal-YARtTpjCikii9nJxER19D6diSyk-AWkPb%aeXX7Nal-YARtTpjCikii9nJxER19D6diSyk-AWkPb%atXX7Nal-YARtTpjCikii9nJxER19D6diSyk-AWkPb%s', 'refs/stash', '--'], expect.objectContaining({ cwd: '/path/to/repo' }));
+			expect(spyOnSpawn).toBeCalledWith('/path/to/git', ['tag', '--list', '--sort=-creatordate'], expect.objectContaining({ cwd: '/path/to/repo' }));
 		});
 
 		it('Should return the repository info (when showRemoteBranches is FALSE)', async () => {
@@ -203,6 +210,7 @@ describe('DataSource', () => {
 			);
 			mockGitSuccessOnce('origin\n');
 			mockGitSuccessOnce('\n');
+			mockGitSuccessOnce('');
 			vscode.mockExtensionSettingReturnValue('repository.showRemoteHeads', true);
 
 			// Run
@@ -214,6 +222,7 @@ describe('DataSource', () => {
 				head: 'develop',
 				remotes: ['origin'],
 				stashes: [],
+				tags: [],
 				error: null
 			});
 			expect(spyOnSpawn).toBeCalledWith('/path/to/git', ['branch', '--no-color'], expect.objectContaining({ cwd: '/path/to/repo' }));
@@ -229,6 +238,7 @@ describe('DataSource', () => {
 			);
 			mockGitSuccessOnce('origin\n');
 			mockGitSuccessOnce('\n');
+			mockGitSuccessOnce('');
 			vscode.mockExtensionSettingReturnValue('repository.showRemoteHeads', true);
 			vscode.mockExtensionSettingReturnValue('date.type', 'Commit Date');
 			vscode.mockExtensionSettingReturnValue('repository.useMailmap', false);
@@ -246,6 +256,7 @@ describe('DataSource', () => {
 				head: 'develop',
 				remotes: ['origin'],
 				stashes: [],
+				tags: [],
 				error: null
 			});
 			expect(spyOnSpawn).toBeCalledWith('/path/to/git', ['branch', '--no-color'], expect.objectContaining({ cwd: '/path/to/repo' }));
@@ -261,6 +272,7 @@ describe('DataSource', () => {
 			);
 			mockGitSuccessOnce('origin\n');
 			mockGitSuccessOnce('\n');
+			mockGitSuccessOnce('');
 			vscode.mockExtensionSettingReturnValue('repository.showRemoteHeads', true);
 			vscode.mockExtensionSettingReturnValue('date.type', 'Commit Date');
 			vscode.mockExtensionSettingReturnValue('repository.useMailmap', false);
@@ -278,6 +290,7 @@ describe('DataSource', () => {
 				head: 'develop',
 				remotes: ['origin'],
 				stashes: [],
+				tags: [],
 				error: null
 			});
 			expect(spyOnSpawn).toBeCalledWith('/path/to/git', ['branch', '--no-color'], expect.objectContaining({ cwd: '/path/to/repo' }));
@@ -293,6 +306,7 @@ describe('DataSource', () => {
 			);
 			mockGitSuccessOnce('origin\n');
 			mockGitSuccessOnce('\n');
+			mockGitSuccessOnce('');
 			vscode.mockExtensionSettingReturnValue('repository.showRemoteHeads', true);
 			vscode.mockExtensionSettingReturnValue('date.type', 'Author Date');
 			vscode.mockExtensionSettingReturnValue('repository.useMailmap', true);
@@ -310,6 +324,7 @@ describe('DataSource', () => {
 				head: 'develop',
 				remotes: ['origin'],
 				stashes: [],
+				tags: [],
 				error: null
 			});
 			expect(spyOnSpawn).toBeCalledWith('/path/to/git', ['branch', '--no-color'], expect.objectContaining({ cwd: '/path/to/repo' }));
@@ -325,6 +340,7 @@ describe('DataSource', () => {
 			);
 			mockGitSuccessOnce('origin\n');
 			mockGitSuccessOnce('\n');
+			mockGitSuccessOnce('');
 			vscode.mockExtensionSettingReturnValue('repository.showRemoteHeads', true);
 			vscode.mockExtensionSettingReturnValue('date.type', 'Author Date');
 			vscode.mockExtensionSettingReturnValue('useMailmap', true);
@@ -342,6 +358,7 @@ describe('DataSource', () => {
 				head: 'develop',
 				remotes: ['origin'],
 				stashes: [],
+				tags: [],
 				error: null
 			});
 			expect(spyOnSpawn).toBeCalledWith('/path/to/git', ['branch', '--no-color'], expect.objectContaining({ cwd: '/path/to/repo' }));
@@ -356,6 +373,7 @@ describe('DataSource', () => {
 				'  master\n'
 			);
 			mockGitSuccessOnce('origin\n');
+			mockGitSuccessOnce('');
 
 			// Run
 			const result = await dataSource.getRepoInfo('/path/to/repo', true, false, []);
@@ -366,11 +384,13 @@ describe('DataSource', () => {
 				head: 'develop',
 				remotes: ['origin'],
 				stashes: [],
+				tags: [],
 				error: null
 			});
 			expect(spyOnSpawn).toBeCalledWith('/path/to/git', ['branch', '-a', '--no-color'], expect.objectContaining({ cwd: '/path/to/repo' }));
 			expect(spyOnSpawn).toBeCalledWith('/path/to/git', ['remote'], expect.objectContaining({ cwd: '/path/to/repo' }));
-			expect(spyOnSpawn).toHaveBeenCalledTimes(2);
+			expect(spyOnSpawn).toBeCalledWith('/path/to/git', ['tag', '--list', '--sort=-creatordate'], expect.objectContaining({ cwd: '/path/to/repo' }));
+			expect(spyOnSpawn).toHaveBeenCalledTimes(3);
 		});
 
 		it('Should return the repository info (hidden remote and an invalid branch)', async () => {
@@ -384,6 +404,7 @@ describe('DataSource', () => {
 			);
 			mockGitSuccessOnce('origin\n');
 			mockGitSuccessOnce('\n');
+			mockGitSuccessOnce('');
 			vscode.mockExtensionSettingReturnValue('repository.showRemoteHeads', true);
 
 			// Run
@@ -395,6 +416,7 @@ describe('DataSource', () => {
 				head: 'develop',
 				remotes: ['origin'],
 				stashes: [],
+				tags: [],
 				error: null
 			});
 			expect(spyOnSpawn).toBeCalledWith('/path/to/git', ['branch', '-a', '--no-color'], expect.objectContaining({ cwd: '/path/to/repo' }));
@@ -413,6 +435,7 @@ describe('DataSource', () => {
 			);
 			mockGitSuccessOnce('origin\n');
 			mockGitSuccessOnce('\n');
+			mockGitSuccessOnce('');
 			vscode.mockExtensionSettingReturnValue('repository.showRemoteHeads', false);
 
 			// Run
@@ -424,6 +447,7 @@ describe('DataSource', () => {
 				head: 'develop',
 				remotes: ['origin'],
 				stashes: [],
+				tags: [],
 				error: null
 			});
 			expect(spyOnSpawn).toBeCalledWith('/path/to/git', ['branch', '-a', '--no-color'], expect.objectContaining({ cwd: '/path/to/repo' }));
@@ -447,6 +471,7 @@ describe('DataSource', () => {
 				head: null,
 				remotes: [],
 				stashes: [],
+				tags: [],
 				error: 'error message'
 			});
 		});
@@ -470,6 +495,7 @@ describe('DataSource', () => {
 				head: null,
 				remotes: [],
 				stashes: [],
+				tags: [],
 				error: 'error message'
 			});
 		});
@@ -482,6 +508,7 @@ describe('DataSource', () => {
 			);
 			mockGitSuccessOnce('origin\n');
 			mockGitThrowingErrorOnce();
+			mockGitSuccessOnce('');
 			vscode.mockExtensionSettingReturnValue('repository.showRemoteHeads', true);
 
 			// Run
@@ -493,6 +520,7 @@ describe('DataSource', () => {
 				head: 'develop',
 				remotes: ['origin'],
 				stashes: [],
+				tags: [],
 				error: null
 			});
 		});
@@ -530,7 +558,7 @@ describe('DataSource', () => {
 			date.setCurrentTime(1587559259);
 
 			// Run
-			const result = await dataSource.getCommits('/path/to/repo', null, 300, true, true, false, false, CommitOrdering.Date, ['origin'], [], []);
+			const result = await dataSource.getCommits('/path/to/repo', null, null, null, 300, true, true, false, false, CommitOrdering.Date, ['origin'], [], [], false);
 
 			// Assert
 			expect(result).toStrictEqual({
@@ -626,7 +654,7 @@ describe('DataSource', () => {
 			date.setCurrentTime(1587559259);
 
 			// Run
-			const result = await dataSource.getCommits('/path/to/repo', ['master', 'develop'], 300, true, true, false, false, CommitOrdering.AuthorDate, ['origin'], [], []);
+			const result = await dataSource.getCommits('/path/to/repo', ['master', 'develop'], null, null, 300, true, true, false, false, CommitOrdering.Date, ['origin'], [], [], false);
 
 			// Assert
 			expect(result).toStrictEqual({
@@ -685,7 +713,7 @@ describe('DataSource', () => {
 				moreCommitsAvailable: false,
 				error: null
 			});
-			expect(spyOnSpawn).toBeCalledWith('/path/to/git', ['-c', 'log.showSignature=false', 'log', '--max-count=301', '--format=%HXX7Nal-YARtTpjCikii9nJxER19D6diSyk-AWkPb%PXX7Nal-YARtTpjCikii9nJxER19D6diSyk-AWkPb%anXX7Nal-YARtTpjCikii9nJxER19D6diSyk-AWkPb%aeXX7Nal-YARtTpjCikii9nJxER19D6diSyk-AWkPb%atXX7Nal-YARtTpjCikii9nJxER19D6diSyk-AWkPb%s', '--author-date-order', 'master', 'develop', '--'], expect.objectContaining({ cwd: '/path/to/repo' }));
+			expect(spyOnSpawn).toBeCalledWith('/path/to/git', ['-c', 'log.showSignature=false', 'log', '--max-count=301', '--format=%HXX7Nal-YARtTpjCikii9nJxER19D6diSyk-AWkPb%PXX7Nal-YARtTpjCikii9nJxER19D6diSyk-AWkPb%anXX7Nal-YARtTpjCikii9nJxER19D6diSyk-AWkPb%aeXX7Nal-YARtTpjCikii9nJxER19D6diSyk-AWkPb%atXX7Nal-YARtTpjCikii9nJxER19D6diSyk-AWkPb%s', '--date-order', 'master', 'develop', '--'], expect.objectContaining({ cwd: '/path/to/repo' }));
 			expect(spyOnSpawn).toBeCalledWith('/path/to/git', ['show-ref', '-d', '--head'], expect.objectContaining({ cwd: '/path/to/repo' }));
 			expect(spyOnSpawn).toBeCalledWith('/path/to/git', ['status', '--untracked-files=all', '--porcelain'], expect.objectContaining({ cwd: '/path/to/repo' }));
 		});
@@ -712,7 +740,7 @@ describe('DataSource', () => {
 			date.setCurrentTime(1587559259);
 
 			// Run
-			const result = await dataSource.getCommits('/path/to/repo', null, 2, true, true, false, false, CommitOrdering.Topological, ['origin'], [], []);
+			const result = await dataSource.getCommits('/path/to/repo', null, null, null, 2, true, true, false, false, CommitOrdering.Date, ['origin'], [], [], false);
 
 			// Assert
 			expect(result).toStrictEqual({
@@ -759,7 +787,7 @@ describe('DataSource', () => {
 				moreCommitsAvailable: true,
 				error: null
 			});
-			expect(spyOnSpawn).toBeCalledWith('/path/to/git', ['-c', 'log.showSignature=false', 'log', '--max-count=3', '--format=%HXX7Nal-YARtTpjCikii9nJxER19D6diSyk-AWkPb%PXX7Nal-YARtTpjCikii9nJxER19D6diSyk-AWkPb%anXX7Nal-YARtTpjCikii9nJxER19D6diSyk-AWkPb%aeXX7Nal-YARtTpjCikii9nJxER19D6diSyk-AWkPb%atXX7Nal-YARtTpjCikii9nJxER19D6diSyk-AWkPb%s', '--topo-order', '--branches', '--tags', '--remotes', 'HEAD', '--'], expect.objectContaining({ cwd: '/path/to/repo' }));
+			expect(spyOnSpawn).toBeCalledWith('/path/to/git', ['-c', 'log.showSignature=false', 'log', '--max-count=3', '--format=%HXX7Nal-YARtTpjCikii9nJxER19D6diSyk-AWkPb%PXX7Nal-YARtTpjCikii9nJxER19D6diSyk-AWkPb%anXX7Nal-YARtTpjCikii9nJxER19D6diSyk-AWkPb%aeXX7Nal-YARtTpjCikii9nJxER19D6diSyk-AWkPb%atXX7Nal-YARtTpjCikii9nJxER19D6diSyk-AWkPb%s', '--date-order', '--branches', '--tags', '--remotes', 'HEAD', '--'], expect.objectContaining({ cwd: '/path/to/repo' }));
 			expect(spyOnSpawn).toBeCalledWith('/path/to/git', ['show-ref', '-d', '--head'], expect.objectContaining({ cwd: '/path/to/repo' }));
 			expect(spyOnSpawn).toBeCalledWith('/path/to/git', ['status', '--untracked-files=all', '--porcelain'], expect.objectContaining({ cwd: '/path/to/repo' }));
 		});
@@ -786,7 +814,7 @@ describe('DataSource', () => {
 			date.setCurrentTime(1587559259);
 
 			// Run
-			const result = await dataSource.getCommits('/path/to/repo', null, 300, true, true, false, false, CommitOrdering.Date, ['origin'], [], []);
+			const result = await dataSource.getCommits('/path/to/repo', null, null, null, 300, true, true, false, false, CommitOrdering.Date, ['origin'], [], [], false);
 
 			// Assert
 			expect(result).toStrictEqual({
@@ -860,7 +888,7 @@ describe('DataSource', () => {
 			date.setCurrentTime(1587559259);
 
 			// Run
-			const result = await dataSource.getCommits('/path/to/repo', null, 300, true, true, false, false, CommitOrdering.Date, ['origin'], [], []);
+			const result = await dataSource.getCommits('/path/to/repo', null, null, null, 300, true, true, false, false, CommitOrdering.Date, ['origin'], [], [], false);
 
 			// Assert
 			expect(result).toStrictEqual({
@@ -938,7 +966,7 @@ describe('DataSource', () => {
 			date.setCurrentTime(1587559259);
 
 			// Run
-			const result = await dataSource.getCommits('/path/to/repo', null, 300, true, true, false, false, CommitOrdering.Date, ['origin'], [], []);
+			const result = await dataSource.getCommits('/path/to/repo', null, null, null, 300, true, true, false, false, CommitOrdering.Date, ['origin'], [], [], false);
 
 			// Assert
 			expect(result).toStrictEqual({
@@ -1029,7 +1057,7 @@ describe('DataSource', () => {
 			date.setCurrentTime(1587559259);
 
 			// Run
-			const result = await dataSource.getCommits('/path/to/repo', null, 300, false, true, false, false, CommitOrdering.Date, ['origin'], [], []);
+			const result = await dataSource.getCommits('/path/to/repo', null, null, null, 300, false, true, false, false, CommitOrdering.Date, ['origin'], [], [], false);
 
 			// Assert
 			expect(result).toStrictEqual({
@@ -1120,7 +1148,7 @@ describe('DataSource', () => {
 			date.setCurrentTime(1587559259);
 
 			// Run
-			const result = await dataSource.getCommits('/path/to/repo', null, 300, true, true, false, false, CommitOrdering.Date, ['origin'], [], []);
+			const result = await dataSource.getCommits('/path/to/repo', null, null, null, 300, true, true, false, false, CommitOrdering.Date, ['origin'], [], [], false);
 
 			// Assert
 			expect(result).toStrictEqual({
@@ -1210,7 +1238,7 @@ describe('DataSource', () => {
 			date.setCurrentTime(1587559259);
 
 			// Run
-			const result = await dataSource.getCommits('/path/to/repo', null, 300, true, false, false, false, CommitOrdering.Date, ['origin'], [], []);
+			const result = await dataSource.getCommits('/path/to/repo', null, null, null, 300, true, false, false, false, CommitOrdering.Date, ['origin'], [], [], false);
 
 			// Assert
 			expect(result).toStrictEqual({
@@ -1302,7 +1330,7 @@ describe('DataSource', () => {
 			date.setCurrentTime(1587559259);
 
 			// Run
-			const result = await dataSource.getCommits('/path/to/repo', null, 300, true, true, true, false, CommitOrdering.Date, ['origin'], [], []);
+			const result = await dataSource.getCommits('/path/to/repo', null, null, null, 300, true, true, true, false, CommitOrdering.Date, ['origin'], [], [], false);
 
 			// Assert
 			expect(result).toStrictEqual({
@@ -1394,7 +1422,7 @@ describe('DataSource', () => {
 			date.setCurrentTime(1587559259);
 
 			// Run
-			const result = await dataSource.getCommits('/path/to/repo', null, 300, true, true, false, true, CommitOrdering.Date, ['origin'], [], []);
+			const result = await dataSource.getCommits('/path/to/repo', null, null, null, 300, true, true, false, true, CommitOrdering.Date, ['origin'], [], [], false);
 
 			// Assert
 			expect(result).toStrictEqual({
@@ -1489,7 +1517,7 @@ describe('DataSource', () => {
 			date.setCurrentTime(1587559259);
 
 			// Run
-			const result = await dataSource.getCommits('/path/to/repo', null, 300, true, true, false, false, CommitOrdering.Date, ['origin'], [], []);
+			const result = await dataSource.getCommits('/path/to/repo', null, null, null, 300, true, true, false, false, CommitOrdering.Date, ['origin'], [], [], false);
 
 			// Assert
 			expect(result).toStrictEqual({
@@ -1585,7 +1613,7 @@ describe('DataSource', () => {
 			date.setCurrentTime(1587559259);
 
 			// Run
-			const result = await dataSource.getCommits('/path/to/repo', null, 300, true, true, false, false, CommitOrdering.Date, ['origin', 'other-remote'], ['other-remote'], []);
+			const result = await dataSource.getCommits('/path/to/repo', null, null, null, 300, true, true, false, false, CommitOrdering.Date, ['origin', 'other-remote'], ['other-remote'], [], false);
 
 			// Assert
 			expect(result).toStrictEqual({
@@ -1676,7 +1704,7 @@ describe('DataSource', () => {
 			date.setCurrentTime(1587559259);
 
 			// Run
-			const result = await dataSource.getCommits('/path/to/repo', null, 300, true, true, false, false, CommitOrdering.Date, ['origin'], [], [
+			const result = await dataSource.getCommits('/path/to/repo', null, null, null, 300, true, true, false, false, CommitOrdering.Date, ['origin'], [], [
 				{
 					hash: '1a2b3c4d5e6f1a2b3c4d5e6f1a2b3c4d5e6f1a2b',
 					baseHash: '2b3c4d5e6f1a2b3c4d5e6f1a2b3c4d5e6f1a2b3c',
@@ -1687,7 +1715,7 @@ describe('DataSource', () => {
 					date: 1587559258,
 					message: 'WIP'
 				}
-			]);
+			], false);
 
 			// Assert
 			expect(result).toStrictEqual({
@@ -1780,7 +1808,7 @@ describe('DataSource', () => {
 			date.setCurrentTime(1587559259);
 
 			// Run
-			const result = await dataSource.getCommits('/path/to/repo', null, 300, true, true, false, false, CommitOrdering.Date, ['origin'], [], [
+			const result = await dataSource.getCommits('/path/to/repo', null, null, null, 300, true, true, false, false, CommitOrdering.Date, ['origin'], [], [
 				{
 					hash: 'a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2',
 					baseHash: '1a2b3c4d5e6f1a2b3c4d5e6f1a2b3c4d5e6f1a2b',
@@ -1801,7 +1829,7 @@ describe('DataSource', () => {
 					date: 1587559258,
 					message: 'WIP 2'
 				}
-			]);
+			], false);
 
 			// Assert
 			expect(result).toStrictEqual({
@@ -1922,7 +1950,7 @@ describe('DataSource', () => {
 			date.setCurrentTime(1587559259);
 
 			// Run
-			const result = await dataSource.getCommits('/path/to/repo', null, 300, true, true, false, false, CommitOrdering.Date, ['origin'], [], [
+			const result = await dataSource.getCommits('/path/to/repo', null, null, null, 300, true, true, false, false, CommitOrdering.Date, ['origin'], [], [
 				{
 					hash: 'a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2',
 					baseHash: '1a2b3c4d5e6f1a2b3c4d5e6f1a2b3c4d5e6f1a2b',
@@ -1943,7 +1971,7 @@ describe('DataSource', () => {
 					date: 1587559260,
 					message: 'WIP 2'
 				}
-			]);
+			], false);
 
 			// Assert
 			expect(result).toStrictEqual({
@@ -2064,7 +2092,7 @@ describe('DataSource', () => {
 			date.setCurrentTime(1587559259);
 
 			// Run
-			const result = await dataSource.getCommits('/path/to/repo', null, 300, true, true, false, false, CommitOrdering.Date, ['origin'], [], [
+			const result = await dataSource.getCommits('/path/to/repo', null, null, null, 300, true, true, false, false, CommitOrdering.Date, ['origin'], [], [
 				{
 					hash: 'a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2',
 					baseHash: '6f1a2b3c4d5e6f1a2b3c4d5e6f1a2b3c4d5e6f1a',
@@ -2075,7 +2103,7 @@ describe('DataSource', () => {
 					date: 1587559258,
 					message: 'WIP 1'
 				}
-			]);
+			], false);
 
 			// Assert
 			expect(result).toStrictEqual({
@@ -2163,7 +2191,7 @@ describe('DataSource', () => {
 			date.setCurrentTime(1587559259);
 
 			// Run
-			const result = await dataSource.getCommits('/path/to/repo', null, 300, true, true, false, false, CommitOrdering.Date, ['origin'], [], []);
+			const result = await dataSource.getCommits('/path/to/repo', null, null, null, 300, true, true, false, false, CommitOrdering.Date, ['origin'], [], [], false);
 
 			// Assert
 			expect(result).toStrictEqual({
@@ -2223,7 +2251,7 @@ describe('DataSource', () => {
 			vscode.mockExtensionSettingReturnValue('repository.showRemoteHeads', true);
 
 			// Run
-			const result = await dataSource.getCommits('/path/to/repo', null, 300, true, true, false, false, CommitOrdering.Date, ['origin'], [], []);
+			const result = await dataSource.getCommits('/path/to/repo', null, null, null, 300, true, true, false, false, CommitOrdering.Date, ['origin'], [], [], false);
 
 			// Assert
 			expect(result).toStrictEqual({
@@ -2267,7 +2295,7 @@ describe('DataSource', () => {
 			date.setCurrentTime(1587559259);
 
 			// Run
-			const result = await dataSource.getCommits('/path/to/repo', null, 300, true, true, false, false, CommitOrdering.Date, ['origin'], [], []);
+			const result = await dataSource.getCommits('/path/to/repo', null, null, null, 300, true, true, false, false, CommitOrdering.Date, ['origin'], [], [], false);
 
 			// Assert
 			expect(result).toStrictEqual({
@@ -2347,7 +2375,7 @@ describe('DataSource', () => {
 			vscode.mockExtensionSettingReturnValue('repository.showRemoteHeads', true);
 
 			// Run
-			const result = await dataSource.getCommits('/path/to/repo', null, 300, true, true, false, false, CommitOrdering.Date, ['origin'], [], []);
+			const result = await dataSource.getCommits('/path/to/repo', null, null, null, 300, true, true, false, false, CommitOrdering.Date, ['origin'], [], [], false);
 
 			// Assert
 			expect(result).toStrictEqual({
@@ -2371,7 +2399,7 @@ describe('DataSource', () => {
 			vscode.mockExtensionSettingReturnValue('repository.showRemoteHeads', true);
 
 			// Run
-			const result = await dataSource.getCommits('/path/to/repo', null, 300, true, true, false, false, CommitOrdering.Date, ['origin'], [], []);
+			const result = await dataSource.getCommits('/path/to/repo', null, null, null, 300, true, true, false, false, CommitOrdering.Date, ['origin'], [], [], false);
 
 			// Assert
 			expect(result).toStrictEqual({
@@ -2412,6 +2440,7 @@ describe('DataSource', () => {
 				'user.name\nGlobal Name\0' +
 				'user.email\nglobal@mhutchie.com\0'
 			);
+			mockGitSuccessOnce('   123\tTest Name <test@mhutchie.com>\n');
 
 			// Run
 			const result = await dataSource.getConfig('/path/to/repo', ['origin']);
@@ -2437,6 +2466,7 @@ describe('DataSource', () => {
 							remote: null
 						}
 					},
+					authors: [{ name: 'Test Name', email: 'test@mhutchie.com' }],
 					diffTool: 'abc',
 					guiDiffTool: 'def',
 					pushDefault: 'origin',
@@ -2478,6 +2508,7 @@ describe('DataSource', () => {
 			mockGitSuccessOnce(
 				'user.name\nGlobal Name\0'
 			);
+			mockGitSuccessOnce('');
 
 			// Run
 			const result = await dataSource.getConfig('/path/to/repo', ['origin']);
@@ -2486,6 +2517,7 @@ describe('DataSource', () => {
 			expect(result).toStrictEqual({
 				config: {
 					branches: {},
+					authors: [],
 					diffTool: 'abc',
 					guiDiffTool: 'def',
 					pushDefault: null,
@@ -2525,6 +2557,7 @@ describe('DataSource', () => {
 			mockGitSuccessOnce(
 				'other.setting\nvalue\0'
 			);
+			mockGitSuccessOnce('');
 
 			// Run
 			const result = await dataSource.getConfig('/path/to/repo', []);
@@ -2533,6 +2566,7 @@ describe('DataSource', () => {
 			expect(result).toStrictEqual({
 				config: {
 					branches: {},
+					authors: [],
 					diffTool: null,
 					guiDiffTool: null,
 					pushDefault: null,
@@ -2571,6 +2605,7 @@ describe('DataSource', () => {
 				'remote.origin.fetch\n+refs/heads/*:refs/remotes/origin/*\0'
 			);
 			mockGitThrowingErrorOnce('fatal: unable to read config file \'c:/users/michael/.gitconfig\': no such file or directory');
+			mockGitSuccessOnce('');
 
 			// Run
 			const result = await dataSource.getConfig('/path/to/repo', ['origin']);
@@ -2579,6 +2614,7 @@ describe('DataSource', () => {
 			expect(result).toStrictEqual({
 				config: {
 					branches: {},
+					authors: [],
 					diffTool: 'abc',
 					guiDiffTool: 'def',
 					pushDefault: null,
@@ -2609,6 +2645,7 @@ describe('DataSource', () => {
 
 		it('Should return an error message thrown by git', async () => {
 			// Setup
+			mockGitThrowingErrorOnce();
 			mockGitThrowingErrorOnce();
 			mockGitThrowingErrorOnce();
 			mockGitThrowingErrorOnce();
@@ -4879,7 +4916,7 @@ describe('DataSource', () => {
 			mockGitSuccessOnce();
 
 			// Run
-			const result = await dataSource.pushBranch('/path/to/repo', 'master', 'origin', false, GitPushBranchMode.Normal);
+			const result = await dataSource.pushBranch('/path/to/repo', 'master', 'origin', false, GitPushBranchMode.Normal, false);
 
 			// Assert
 			expect(result).toBe(null);
@@ -4891,7 +4928,7 @@ describe('DataSource', () => {
 			mockGitSuccessOnce();
 
 			// Run
-			const result = await dataSource.pushBranch('/path/to/repo', 'master', 'origin', true, GitPushBranchMode.Normal);
+			const result = await dataSource.pushBranch('/path/to/repo', 'master', 'origin', true, GitPushBranchMode.Normal, false);
 
 			// Assert
 			expect(result).toBe(null);
@@ -4903,7 +4940,7 @@ describe('DataSource', () => {
 			mockGitSuccessOnce();
 
 			// Run
-			const result = await dataSource.pushBranch('/path/to/repo', 'master', 'origin', false, GitPushBranchMode.Force);
+			const result = await dataSource.pushBranch('/path/to/repo', 'master', 'origin', false, GitPushBranchMode.Force, false);
 
 			// Assert
 			expect(result).toBe(null);
@@ -4915,7 +4952,7 @@ describe('DataSource', () => {
 			mockGitSuccessOnce();
 
 			// Run
-			const result = await dataSource.pushBranch('/path/to/repo', 'master', 'origin', false, GitPushBranchMode.ForceWithLease);
+			const result = await dataSource.pushBranch('/path/to/repo', 'master', 'origin', false, GitPushBranchMode.ForceWithLease, false);
 
 			// Assert
 			expect(result).toBe(null);
@@ -4927,7 +4964,7 @@ describe('DataSource', () => {
 			mockGitThrowingErrorOnce();
 
 			// Run
-			const result = await dataSource.pushBranch('/path/to/repo', 'master', 'origin', false, GitPushBranchMode.Normal);
+			const result = await dataSource.pushBranch('/path/to/repo', 'master', 'origin', false, GitPushBranchMode.Normal, false);
 
 			// Assert
 			expect(result).toBe('error message');
@@ -4940,7 +4977,7 @@ describe('DataSource', () => {
 			mockGitSuccessOnce();
 
 			// Run
-			const result = await dataSource.pushBranchToMultipleRemotes('/path/to/repo', 'master', ['origin'], false, GitPushBranchMode.Normal);
+			const result = await dataSource.pushBranchToMultipleRemotes('/path/to/repo', 'master', ['origin'], false, GitPushBranchMode.Normal, false);
 
 			// Assert
 			expect(result).toStrictEqual([null]);
@@ -4953,7 +4990,7 @@ describe('DataSource', () => {
 			mockGitSuccessOnce();
 
 			// Run
-			const result = await dataSource.pushBranchToMultipleRemotes('/path/to/repo', 'master', ['origin', 'other-origin'], false, GitPushBranchMode.Force);
+			const result = await dataSource.pushBranchToMultipleRemotes('/path/to/repo', 'master', ['origin', 'other-origin'], false, GitPushBranchMode.Force, false);
 
 			// Assert
 			expect(result).toStrictEqual([null, null]);
@@ -4967,7 +5004,7 @@ describe('DataSource', () => {
 			mockGitThrowingErrorOnce();
 
 			// Run
-			const result = await dataSource.pushBranchToMultipleRemotes('/path/to/repo', 'master', ['origin', 'other-origin', 'another-origin'], true, GitPushBranchMode.Normal);
+			const result = await dataSource.pushBranchToMultipleRemotes('/path/to/repo', 'master', ['origin', 'other-origin', 'another-origin'], true, GitPushBranchMode.Normal, false);
 
 			// Assert
 			expect(result).toStrictEqual([null, 'error message']);
@@ -4977,7 +5014,7 @@ describe('DataSource', () => {
 
 		it('Should return an error when no remotes are specified', async () => {
 			// Run
-			const result = await dataSource.pushBranchToMultipleRemotes('/path/to/repo', 'master', [], false, GitPushBranchMode.Normal);
+			const result = await dataSource.pushBranchToMultipleRemotes('/path/to/repo', 'master', [], false, GitPushBranchMode.Normal, false);
 
 			// Assert
 			expect(result).toStrictEqual(['No remote(s) were specified to push the branch master to.']);
@@ -5376,6 +5413,7 @@ describe('DataSource', () => {
 	describe('fetchIntoLocalBranch', () => {
 		it('Should fetch a remote branch into a local branch', async () => {
 			// Setup
+			mockGitSuccessOnce('master\n');
 			mockGitSuccessOnce();
 
 			// Run
@@ -5383,11 +5421,13 @@ describe('DataSource', () => {
 
 			// Assert
 			expect(result).toBe(null);
+			expect(spyOnSpawn).toBeCalledWith('/path/to/git', ['symbolic-ref', '--short', 'HEAD'], expect.objectContaining({ cwd: '/path/to/repo' }));
 			expect(spyOnSpawn).toBeCalledWith('/path/to/git', ['fetch', 'origin', 'master:develop'], expect.objectContaining({ cwd: '/path/to/repo' }));
 		});
 
 		it('Should (force) fetch a remote branch into a local branch', async () => {
 			// Setup
+			mockGitSuccessOnce('master\n');
 			mockGitSuccessOnce();
 
 			// Run
@@ -5400,6 +5440,7 @@ describe('DataSource', () => {
 
 		it('Should return an error message thrown by git', async () => {
 			// Setup
+			mockGitSuccessOnce('master\n');
 			mockGitThrowingErrorOnce();
 
 			// Run
@@ -5417,7 +5458,7 @@ describe('DataSource', () => {
 			vscode.mockExtensionSettingReturnValue('repository.sign.commits', false);
 
 			// Run
-			const result = await dataSource.pullBranch('/path/to/repo', 'master', 'origin', false, false);
+			const result = await dataSource.pullBranch('/path/to/repo', 'master', 'origin', false, false, false);
 
 			// Assert
 			expect(result).toBe(null);
@@ -5431,7 +5472,7 @@ describe('DataSource', () => {
 			vscode.mockExtensionSettingReturnValue('repository.sign.commits', false);
 
 			// Run
-			const result = await dataSource.pullBranch('/path/to/repo', 'master', 'origin', true, false);
+			const result = await dataSource.pullBranch('/path/to/repo', 'master', 'origin', true, false, false);
 
 			// Assert
 			expect(result).toBe(null);
@@ -5445,7 +5486,7 @@ describe('DataSource', () => {
 			vscode.mockExtensionSettingReturnValue('repository.sign.commits', true);
 
 			// Run
-			const result = await dataSource.pullBranch('/path/to/repo', 'master', 'origin', true, false);
+			const result = await dataSource.pullBranch('/path/to/repo', 'master', 'origin', true, false, false);
 
 			// Assert
 			expect(result).toBe(null);
@@ -5462,7 +5503,7 @@ describe('DataSource', () => {
 			vscode.mockExtensionSettingReturnValue('dialog.pullBranch.squashMessageFormat', 'Default');
 
 			// Run
-			const result = await dataSource.pullBranch('/path/to/repo', 'master', 'origin', false, true);
+			const result = await dataSource.pullBranch('/path/to/repo', 'master', 'origin', false, true, false);
 
 			// Assert
 			expect(result).toBe(null);
@@ -5483,7 +5524,7 @@ describe('DataSource', () => {
 			vscode.mockExtensionSettingReturnValue('dialog.pullBranch.squashMessageFormat', 'Default');
 
 			// Run
-			const result = await dataSource.pullBranch('/path/to/repo', 'master', 'origin', false, true);
+			const result = await dataSource.pullBranch('/path/to/repo', 'master', 'origin', false, true, false);
 
 			// Assert
 			expect(result).toBe(null);
@@ -5502,7 +5543,7 @@ describe('DataSource', () => {
 			vscode.mockExtensionSettingReturnValue('repository.sign.commits', false);
 
 			// Run
-			const result = await dataSource.pullBranch('/path/to/repo', 'master', 'origin', false, true);
+			const result = await dataSource.pullBranch('/path/to/repo', 'master', 'origin', false, true, false);
 
 			// Assert
 			expect(result).toBe(null);
@@ -5518,7 +5559,7 @@ describe('DataSource', () => {
 			vscode.mockExtensionSettingReturnValue('repository.sign.commits', false);
 
 			// Run
-			const result = await dataSource.pullBranch('/path/to/repo', 'master', 'origin', false, true);
+			const result = await dataSource.pullBranch('/path/to/repo', 'master', 'origin', false, true, false);
 
 			// Assert
 			expect(result).toBe(null);
@@ -5536,7 +5577,7 @@ describe('DataSource', () => {
 			vscode.mockExtensionSettingReturnValue('dialog.pullBranch.squashMessageFormat', 'Default');
 
 			// Run
-			const result = await dataSource.pullBranch('/path/to/repo', 'master', 'origin', true, true);
+			const result = await dataSource.pullBranch('/path/to/repo', 'master', 'origin', true, true, false);
 
 			// Assert
 			expect(result).toBe(null);
@@ -5555,7 +5596,7 @@ describe('DataSource', () => {
 			vscode.mockExtensionSettingReturnValue('dialog.pullBranch.squashMessageFormat', 'Git SQUASH_MSG');
 
 			// Run
-			const result = await dataSource.pullBranch('/path/to/repo', 'master', 'origin', false, true);
+			const result = await dataSource.pullBranch('/path/to/repo', 'master', 'origin', false, true, false);
 
 			// Assert
 			expect(result).toBe(null);
@@ -5571,7 +5612,7 @@ describe('DataSource', () => {
 			vscode.mockExtensionSettingReturnValue('repository.sign.commits', false);
 
 			// Run
-			const result = await dataSource.pullBranch('/path/to/repo', 'master', 'origin', false, true);
+			const result = await dataSource.pullBranch('/path/to/repo', 'master', 'origin', false, true, false);
 
 			// Assert
 			expect(result).toBe('error message');
@@ -5587,7 +5628,7 @@ describe('DataSource', () => {
 			vscode.mockExtensionSettingReturnValue('dialog.pullBranch.squashMessageFormat', 'Default');
 
 			// Run
-			const result = await dataSource.pullBranch('/path/to/repo', 'master', 'origin', false, true);
+			const result = await dataSource.pullBranch('/path/to/repo', 'master', 'origin', false, true, false);
 
 			// Assert
 			expect(result).toBe('error message');
@@ -5627,7 +5668,7 @@ describe('DataSource', () => {
 			vscode.mockExtensionSettingReturnValue('repository.sign.commits', false);
 
 			// Run
-			const result = await dataSource.merge('/path/to/repo', 'develop', MergeActionOn.Branch, false, false, false, false);
+			const result = await dataSource.merge('/path/to/repo', 'develop', MergeActionOn.Branch, false, false, false, false, false);
 
 			// Assert
 			expect(result).toBe(null);
@@ -5641,7 +5682,7 @@ describe('DataSource', () => {
 			vscode.mockExtensionSettingReturnValue('repository.sign.commits', false);
 
 			// Run
-			const result = await dataSource.merge('/path/to/repo', 'develop', MergeActionOn.Branch, true, false, false, false);
+			const result = await dataSource.merge('/path/to/repo', 'develop', MergeActionOn.Branch, true, false, false, false, false);
 
 			// Assert
 			expect(result).toBe(null);
@@ -5655,7 +5696,7 @@ describe('DataSource', () => {
 			vscode.mockExtensionSettingReturnValue('repository.sign.commits', true);
 
 			// Run
-			const result = await dataSource.merge('/path/to/repo', 'develop', MergeActionOn.Branch, true, false, false, false);
+			const result = await dataSource.merge('/path/to/repo', 'develop', MergeActionOn.Branch, true, false, false, false, false);
 
 			// Assert
 			expect(result).toBe(null);
@@ -5672,7 +5713,7 @@ describe('DataSource', () => {
 			vscode.mockExtensionSettingReturnValue('dialog.merge.squashMessageFormat', 'Default');
 
 			// Run
-			const result = await dataSource.merge('/path/to/repo', 'develop', MergeActionOn.Branch, false, false, true, false);
+			const result = await dataSource.merge('/path/to/repo', 'develop', MergeActionOn.Branch, false, false, true, false, false);
 
 			// Assert
 			expect(result).toBe(null);
@@ -5693,7 +5734,7 @@ describe('DataSource', () => {
 			vscode.mockExtensionSettingReturnValue('dialog.merge.squashMessageFormat', 'Default');
 
 			// Run
-			const result = await dataSource.merge('/path/to/repo', 'origin/develop', MergeActionOn.RemoteTrackingBranch, false, false, true, false);
+			const result = await dataSource.merge('/path/to/repo', 'origin/develop', MergeActionOn.RemoteTrackingBranch, false, false, true, false, false);
 
 			// Assert
 			expect(result).toBe(null);
@@ -5712,7 +5753,7 @@ describe('DataSource', () => {
 			vscode.mockExtensionSettingReturnValue('dialog.merge.squashMessageFormat', 'Default');
 
 			// Run
-			const result = await dataSource.merge('/path/to/repo', '1a2b3c4d5e6f1a2b3c4d5e6f1a2b3c4d5e6f1a2b', MergeActionOn.Commit, false, false, true, false);
+			const result = await dataSource.merge('/path/to/repo', '1a2b3c4d5e6f1a2b3c4d5e6f1a2b3c4d5e6f1a2b', MergeActionOn.Commit, false, false, true, false, false);
 
 			// Assert
 			expect(result).toBe(null);
@@ -5731,7 +5772,7 @@ describe('DataSource', () => {
 			vscode.mockExtensionSettingReturnValue('dialog.merge.squashMessageFormat', 'Default');
 
 			// Run
-			const result = await dataSource.merge('/path/to/repo', 'develop', MergeActionOn.Branch, false, false, true, false);
+			const result = await dataSource.merge('/path/to/repo', 'develop', MergeActionOn.Branch, false, false, true, false, false);
 
 			// Assert
 			expect(result).toBe(null);
@@ -5752,7 +5793,7 @@ describe('DataSource', () => {
 			vscode.mockExtensionSettingReturnValue('dialog.merge.squashMessageFormat', 'Git SQUASH_MSG');
 
 			// Run
-			const result = await dataSource.merge('/path/to/repo', 'develop', MergeActionOn.Branch, false, false, true, false);
+			const result = await dataSource.merge('/path/to/repo', 'develop', MergeActionOn.Branch, false, false, true, false, false);
 
 			// Assert
 			expect(result).toBe(null);
@@ -5769,7 +5810,7 @@ describe('DataSource', () => {
 			vscode.mockExtensionSettingReturnValue('repository.sign.commits', false);
 
 			// Run
-			const result = await dataSource.merge('/path/to/repo', 'develop', MergeActionOn.Branch, false, false, true, false);
+			const result = await dataSource.merge('/path/to/repo', 'develop', MergeActionOn.Branch, false, false, true, false, false);
 
 			// Assert
 			expect(result).toBe(null);
@@ -5784,7 +5825,7 @@ describe('DataSource', () => {
 			vscode.mockExtensionSettingReturnValue('repository.sign.commits', false);
 
 			// Run
-			const result = await dataSource.merge('/path/to/repo', 'develop', MergeActionOn.Branch, false, false, false, true);
+			const result = await dataSource.merge('/path/to/repo', 'develop', MergeActionOn.Branch, false, false, false, false, true);
 
 			// Assert
 			expect(result).toBe(null);
@@ -5798,7 +5839,7 @@ describe('DataSource', () => {
 			vscode.mockExtensionSettingReturnValue('repository.sign.commits', false);
 
 			// Run
-			const result = await dataSource.merge('/path/to/repo', 'develop', MergeActionOn.Branch, false, false, true, true);
+			const result = await dataSource.merge('/path/to/repo', 'develop', MergeActionOn.Branch, false, false, true, false, true);
 
 			// Assert
 			expect(result).toBe(null);
@@ -5812,7 +5853,7 @@ describe('DataSource', () => {
 			vscode.mockExtensionSettingReturnValue('repository.sign.commits', false);
 
 			// Run
-			const result = await dataSource.merge('/path/to/repo', 'develop', MergeActionOn.Branch, true, false, true, true);
+			const result = await dataSource.merge('/path/to/repo', 'develop', MergeActionOn.Branch, true, false, true, false, true);
 
 			// Assert
 			expect(result).toBe(null);
@@ -5826,7 +5867,7 @@ describe('DataSource', () => {
 			vscode.mockExtensionSettingReturnValue('repository.sign.commits', false);
 
 			// Run
-			const result = await dataSource.merge('/path/to/repo', 'develop', MergeActionOn.Branch, false, false, true, false);
+			const result = await dataSource.merge('/path/to/repo', 'develop', MergeActionOn.Branch, false, false, true, false, false);
 
 			// Assert
 			expect(result).toBe('error message');
@@ -5841,7 +5882,7 @@ describe('DataSource', () => {
 			vscode.mockExtensionSettingReturnValue('repository.sign.commits', false);
 
 			// Run
-			const result = await dataSource.merge('/path/to/repo', 'develop', MergeActionOn.Branch, false, false, true, false);
+			const result = await dataSource.merge('/path/to/repo', 'develop', MergeActionOn.Branch, false, false, true, false, false);
 
 			// Assert
 			expect(result).toBe('error message');
@@ -5853,6 +5894,10 @@ describe('DataSource', () => {
 	});
 
 	describe('rebase', () => {
+		afterEach(() => {
+			jest.useRealTimers();
+		});
+
 		it('Should rebase the current branch on a branch', async () => {
 			// Setup
 			mockGitSuccessOnce();
@@ -5906,7 +5951,9 @@ describe('DataSource', () => {
 
 		it('Should launch the interactive rebase of the current branch on a branch in a terminal', async () => {
 			// Setup
-			jest.useFakeTimers();
+			jest.useRealTimers();
+			jest.useFakeTimers({ doNotFake: ['setTimeout', 'setInterval'] });
+			jest.spyOn(global, "setTimeout");
 			const spyOnOpenGitTerminal = jest.spyOn(utils, 'openGitTerminal');
 			spyOnOpenGitTerminal.mockReturnValueOnce();
 			vscode.mockExtensionSettingReturnValue('repository.sign.commits', false);
@@ -5929,7 +5976,9 @@ describe('DataSource', () => {
 
 		it('Should launch the interactive rebase of the current branch on a commit in a terminal', async () => {
 			// Setup
-			jest.useFakeTimers();
+			jest.useRealTimers();
+			jest.useFakeTimers({ doNotFake: ['setTimeout', 'setInterval'] });
+			jest.spyOn(global, "setTimeout");
 			const spyOnOpenGitTerminal = jest.spyOn(utils, 'openGitTerminal');
 			spyOnOpenGitTerminal.mockReturnValueOnce();
 			vscode.mockExtensionSettingReturnValue('repository.sign.commits', false);
@@ -5952,7 +6001,9 @@ describe('DataSource', () => {
 
 		it('Should launch the interactive rebase of the current branch on a branch in a terminal (signing the new commits)', async () => {
 			// Setup
-			jest.useFakeTimers();
+			jest.useRealTimers();
+			jest.useFakeTimers({ doNotFake: ['setTimeout', 'setInterval'] });
+			jest.spyOn(global, "setTimeout");
 			const spyOnOpenGitTerminal = jest.spyOn(utils, 'openGitTerminal');
 			spyOnOpenGitTerminal.mockReturnValueOnce();
 			vscode.mockExtensionSettingReturnValue('repository.sign.commits', true);
@@ -6628,9 +6679,15 @@ describe('DataSource', () => {
 	});
 
 	describe('openExternalDirDiff', () => {
+		afterEach(() => {
+			jest.useRealTimers();
+		});
+
 		it('Should launch a gui directory diff (for one commit)', async () => {
 			// Setup
-			jest.useFakeTimers();
+			jest.useRealTimers();
+			jest.useFakeTimers({ doNotFake: ['setTimeout', 'setInterval'] });
+			jest.spyOn(global, "setTimeout");
 			mockGitSuccessOnce();
 
 			// Run
@@ -6653,7 +6710,9 @@ describe('DataSource', () => {
 
 		it('Should launch a gui directory diff (between two commits)', async () => {
 			// Setup
-			jest.useFakeTimers();
+			jest.useRealTimers();
+			jest.useFakeTimers({ doNotFake: ['setTimeout', 'setInterval'] });
+			jest.spyOn(global, "setTimeout");
 			mockGitSuccessOnce();
 
 			// Run
@@ -6676,7 +6735,9 @@ describe('DataSource', () => {
 
 		it('Should launch a gui directory diff (for uncommitted changes)', async () => {
 			// Setup
-			jest.useFakeTimers();
+			jest.useRealTimers();
+			jest.useFakeTimers({ doNotFake: ['setTimeout', 'setInterval'] });
+			jest.spyOn(global, "setTimeout");
 			mockGitSuccessOnce();
 
 			// Run
@@ -6699,7 +6760,9 @@ describe('DataSource', () => {
 
 		it('Should launch a gui directory diff (between a commit and the uncommitted changes)', async () => {
 			// Setup
-			jest.useFakeTimers();
+			jest.useRealTimers();
+			jest.useFakeTimers({ doNotFake: ['setTimeout', 'setInterval'] });
+			jest.spyOn(global, "setTimeout");
 			mockGitSuccessOnce();
 
 			// Run
@@ -6722,7 +6785,9 @@ describe('DataSource', () => {
 
 		it('Should launch a directory diff in a terminal (between two commits)', async () => {
 			// Setup
-			jest.useFakeTimers();
+			jest.useRealTimers();
+			jest.useFakeTimers({ doNotFake: ['setTimeout', 'setInterval'] });
+			jest.spyOn(global, "setTimeout");
 			const spyOnOpenGitTerminal = jest.spyOn(utils, 'openGitTerminal');
 			spyOnOpenGitTerminal.mockReturnValueOnce();
 
@@ -6756,7 +6821,9 @@ describe('DataSource', () => {
 
 		it('Should display the error message when the diff tool doesn\'t exit successfully', async () => {
 			// Setup
-			jest.useFakeTimers();
+			jest.useRealTimers();
+			jest.useFakeTimers({ doNotFake: ['setTimeout', 'setInterval'] });
+			jest.spyOn(global, "setTimeout");
 			mockGitThrowingErrorOnce('line1\nline2\nline3');
 			vscode.window.showErrorMessage.mockResolvedValueOnce(null);
 

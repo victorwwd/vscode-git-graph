@@ -73,9 +73,11 @@ describe('ExtensionState', () => {
 				pullRequestConfig: null,
 				showRemoteBranches: true,
 				showRemoteBranchesV2: BooleanOverride.Enabled,
+				simplifyByDecoration: BooleanOverride.Disabled,
 				showStashes: BooleanOverride.Enabled,
 				showTags: BooleanOverride.Enabled,
-				workspaceFolderIndex: 0
+				workspaceFolderIndex: 0,
+				isCdvSummaryHidden: false
 			};
 			extensionContext.workspaceState.get.mockReturnValueOnce({
 				'/path/to/repo': repoState
@@ -121,9 +123,11 @@ describe('ExtensionState', () => {
 					pullRequestConfig: null,
 					showRemoteBranches: true,
 					showRemoteBranchesV2: BooleanOverride.Default,
+					simplifyByDecoration: BooleanOverride.Default,
 					showStashes: BooleanOverride.Default,
 					showTags: BooleanOverride.Default,
-					workspaceFolderIndex: null
+					workspaceFolderIndex: null,
+					isCdvSummaryHidden: false
 				}
 			});
 		});
@@ -159,9 +163,11 @@ describe('ExtensionState', () => {
 					pullRequestConfig: null,
 					showRemoteBranches: true,
 					showRemoteBranchesV2: BooleanOverride.Default,
+					simplifyByDecoration: BooleanOverride.Default,
 					showStashes: BooleanOverride.Default,
 					showTags: BooleanOverride.Default,
-					workspaceFolderIndex: null
+					workspaceFolderIndex: null,
+					isCdvSummaryHidden: false
 				}
 			});
 		});
@@ -197,9 +203,11 @@ describe('ExtensionState', () => {
 					pullRequestConfig: null,
 					showRemoteBranches: false,
 					showRemoteBranchesV2: BooleanOverride.Disabled,
+					simplifyByDecoration: BooleanOverride.Default,
 					showStashes: BooleanOverride.Default,
 					showTags: BooleanOverride.Default,
-					workspaceFolderIndex: null
+					workspaceFolderIndex: null,
+					isCdvSummaryHidden: false
 				}
 			});
 		});
@@ -235,9 +243,11 @@ describe('ExtensionState', () => {
 					pullRequestConfig: null,
 					showRemoteBranches: false,
 					showRemoteBranchesV2: BooleanOverride.Default,
+					simplifyByDecoration: BooleanOverride.Default,
 					showStashes: BooleanOverride.Default,
 					showTags: BooleanOverride.Default,
-					workspaceFolderIndex: null
+					workspaceFolderIndex: null,
+					isCdvSummaryHidden: false
 				}
 			});
 		});
@@ -273,9 +283,11 @@ describe('ExtensionState', () => {
 					pullRequestConfig: null,
 					showRemoteBranches: true,
 					showRemoteBranchesV2: BooleanOverride.Enabled,
+					simplifyByDecoration: BooleanOverride.Default,
 					showStashes: BooleanOverride.Default,
 					showTags: BooleanOverride.Default,
-					workspaceFolderIndex: null
+					workspaceFolderIndex: null,
+					isCdvSummaryHidden: false
 				}
 			});
 		});
@@ -314,9 +326,11 @@ describe('ExtensionState', () => {
 					pullRequestConfig: null,
 					showRemoteBranches: true,
 					showRemoteBranchesV2: BooleanOverride.Default,
+					simplifyByDecoration: BooleanOverride.Default,
 					showStashes: BooleanOverride.Default,
 					showTags: BooleanOverride.Default,
-					workspaceFolderIndex: null
+					workspaceFolderIndex: null,
+					isCdvSummaryHidden: false
 				},
 				'/path/to/repo-2': {
 					cdvDivider: 0.5,
@@ -335,9 +349,11 @@ describe('ExtensionState', () => {
 					pullRequestConfig: null,
 					showRemoteBranches: false,
 					showRemoteBranchesV2: BooleanOverride.Disabled,
+					simplifyByDecoration: BooleanOverride.Default,
 					showStashes: BooleanOverride.Default,
 					showTags: BooleanOverride.Default,
-					workspaceFolderIndex: null
+					workspaceFolderIndex: null,
+					isCdvSummaryHidden: false
 				}
 			});
 			expect(workspaceConfiguration.get).toHaveBeenCalledTimes(1);
@@ -359,7 +375,7 @@ describe('ExtensionState', () => {
 		it('Should store the provided repositories in the workspace state', () => {
 			// Setup
 			const repos = {};
-			extensionContext.workspaceState.update.mockResolvedValueOnce(null);
+			extensionContext.workspaceState.update.mockResolvedValueOnce(undefined);
 
 			// Run
 			extensionState.saveRepos(repos);
@@ -373,7 +389,7 @@ describe('ExtensionState', () => {
 		it('Should update the last active repo and code reviews with the new repository path', () => {
 			// Setup
 			extensionContext.workspaceState.get.mockReturnValueOnce('/path/to/repo');
-			extensionContext.workspaceState.update.mockResolvedValueOnce(null);
+			extensionContext.workspaceState.update.mockResolvedValueOnce(undefined);
 			extensionContext.workspaceState.get.mockReturnValueOnce({
 				'/path/to/repo': {
 					'a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2': {
@@ -383,7 +399,7 @@ describe('ExtensionState', () => {
 					}
 				}
 			});
-			extensionContext.workspaceState.update.mockResolvedValueOnce(null);
+			extensionContext.workspaceState.update.mockResolvedValueOnce(undefined);
 
 			// Run
 			extensionState.transferRepo('/path/to/repo', '/new/path/to/repo');
@@ -483,7 +499,7 @@ describe('ExtensionState', () => {
 				issueLinkingConfig: null,
 				pushTagSkipRemoteCheck: false
 			};
-			extensionContext.globalState.update.mockResolvedValueOnce(null);
+			extensionContext.globalState.update.mockResolvedValueOnce(undefined);
 
 			// Run
 			const result = await extensionState.setGlobalViewState(globalViewState);
@@ -573,7 +589,7 @@ describe('ExtensionState', () => {
 				findIsRegex: false,
 				findOpenCommitDetailsView: true
 			};
-			extensionContext.workspaceState.update.mockResolvedValueOnce(null);
+			extensionContext.workspaceState.update.mockResolvedValueOnce(undefined);
 
 			// Run
 			const result = await extensionState.setWorkspaceViewState(workspaceViewState);
@@ -632,7 +648,7 @@ describe('ExtensionState', () => {
 		it('Should successfully store the ignored repositories', async () => {
 			// Setup
 			const ignoreRepos = ['/path/to/ignore'];
-			extensionContext.workspaceState.update.mockResolvedValueOnce(null);
+			extensionContext.workspaceState.update.mockResolvedValueOnce(undefined);
 
 			// Run
 			const result = await extensionState.setIgnoredRepos(ignoreRepos);
@@ -685,7 +701,7 @@ describe('ExtensionState', () => {
 	describe('setLastActiveRepo', () => {
 		it('Should store the last active repository', () => {
 			// Setup
-			extensionContext.workspaceState.update.mockResolvedValueOnce(null);
+			extensionContext.workspaceState.update.mockResolvedValueOnce(undefined);
 
 			// Run
 			extensionState.setLastActiveRepo('/path/to/repo');
@@ -725,7 +741,7 @@ describe('ExtensionState', () => {
 		it('Should return TRUE if the avatar storage folder existed on startup', () => {
 			// Setup
 			const spyOnStat = jest.spyOn(fs, 'stat');
-			spyOnStat.mockImplementationOnce((_, callback) => callback(null, {} as fs.Stats));
+			spyOnStat.mockImplementationOnce(((_path, callback) => (callback as (err: Error | null, stats: fs.Stats) => void)(null, {} as fs.Stats)) as typeof fs.stat);
 			const extensionState = new ExtensionState(extensionContext, onDidChangeGitExecutable.subscribe);
 
 			// Run
@@ -741,9 +757,9 @@ describe('ExtensionState', () => {
 
 		it('Should return TRUE if the avatar storage folder was successfully created', () => {
 			// Setup
-			jest.spyOn(fs, 'stat').mockImplementationOnce((_, callback) => callback(new Error(), {} as fs.Stats));
+			jest.spyOn(fs, 'stat').mockImplementationOnce(((_path, callback) => (callback as (err: Error | null, stats: fs.Stats) => void)(new Error(), {} as fs.Stats)) as typeof fs.stat);
 			const spyOnMkdir = jest.spyOn(fs, 'mkdir');
-			spyOnMkdir.mockImplementation((_, callback) => callback(null));
+			spyOnMkdir.mockImplementation(((_path, callback) => (callback as (err: NodeJS.ErrnoException | null) => void)(null)) as typeof fs.mkdir);
 			const extensionState = new ExtensionState(extensionContext, onDidChangeGitExecutable.subscribe);
 
 			// Run
@@ -760,9 +776,9 @@ describe('ExtensionState', () => {
 
 		it('Should return TRUE if the avatar storage folder was created after the initial stat check', () => {
 			// Setup
-			jest.spyOn(fs, 'stat').mockImplementationOnce((_, callback) => callback(new Error(), {} as fs.Stats));
+			jest.spyOn(fs, 'stat').mockImplementationOnce(((_path, callback) => (callback as (err: Error | null, stats: fs.Stats) => void)(new Error(), {} as fs.Stats)) as typeof fs.stat);
 			const spyOnMkdir = jest.spyOn(fs, 'mkdir');
-			spyOnMkdir.mockImplementation((_, callback) => callback({ code: 'EEXIST' } as NodeJS.ErrnoException));
+			spyOnMkdir.mockImplementation(((_path, callback) => (callback as (err: NodeJS.ErrnoException | null) => void)({ code: 'EEXIST' } as NodeJS.ErrnoException)) as typeof fs.mkdir);
 			const extensionState = new ExtensionState(extensionContext, onDidChangeGitExecutable.subscribe);
 
 			// Run
@@ -779,9 +795,9 @@ describe('ExtensionState', () => {
 
 		it('Should return FALSE if the avatar storage folder could not be created', () => {
 			// Setup
-			jest.spyOn(fs, 'stat').mockImplementationOnce((_, callback) => callback(new Error(), {} as fs.Stats));
+			jest.spyOn(fs, 'stat').mockImplementationOnce(((_path, callback) => (callback as (err: Error | null, stats: fs.Stats) => void)(new Error(), {} as fs.Stats)) as typeof fs.stat);
 			const spyOnMkdir = jest.spyOn(fs, 'mkdir');
-			spyOnMkdir.mockImplementation((_, callback) => callback({} as NodeJS.ErrnoException));
+			spyOnMkdir.mockImplementation(((_path, callback) => (callback as (err: NodeJS.ErrnoException | null) => void)({} as NodeJS.ErrnoException)) as typeof fs.mkdir);
 			const extensionState = new ExtensionState(extensionContext, onDidChangeGitExecutable.subscribe);
 
 			// Run
@@ -839,7 +855,7 @@ describe('ExtensionState', () => {
 			// Setup
 			const avatar = { image: 'name.jpg', timestamp: 0, identicon: false };
 			extensionContext.globalState.get.mockReturnValueOnce({});
-			extensionContext.globalState.update.mockResolvedValueOnce(null);
+			extensionContext.globalState.update.mockResolvedValueOnce(undefined);
 
 			// Run
 			extensionState.saveAvatar('test@example.com', avatar);
@@ -857,7 +873,7 @@ describe('ExtensionState', () => {
 				'test1@example.com': avatar,
 				'test2@example.com': avatar
 			});
-			extensionContext.globalState.update.mockResolvedValueOnce(null);
+			extensionContext.globalState.update.mockResolvedValueOnce(undefined);
 
 			// Run
 			extensionState.removeAvatarFromCache('test1@example.com');
@@ -876,7 +892,7 @@ describe('ExtensionState', () => {
 
 		it('Should clear all avatars from the cache and delete all avatars that are currently stored on the file system', async () => {
 			// Setup
-			extensionContext.globalState.update.mockResolvedValueOnce(null);
+			extensionContext.globalState.update.mockResolvedValueOnce(undefined);
 			spyOnReaddir.mockImplementationOnce((_, callback) => callback(null, ['file1.jpg', 'file2.jpg']));
 			spyOnUnlink.mockImplementationOnce((_, callback) => callback(null));
 			spyOnUnlink.mockImplementationOnce((_, callback) => callback(null));
@@ -896,7 +912,7 @@ describe('ExtensionState', () => {
 
 		it('Should skip deleting avatars on the file system if they could not be listed from the file system', async () => {
 			// Setup
-			extensionContext.globalState.update.mockResolvedValueOnce(null);
+			extensionContext.globalState.update.mockResolvedValueOnce(undefined);
 			spyOnReaddir.mockImplementationOnce((_, callback) => callback(new Error(), ['file1.jpg', 'file2.jpg']));
 
 			// Run
@@ -929,7 +945,7 @@ describe('ExtensionState', () => {
 			// Setup
 			const codeReviews = {};
 			extensionContext.workspaceState.get.mockReturnValueOnce(codeReviews);
-			extensionContext.workspaceState.update.mockResolvedValueOnce(null);
+			extensionContext.workspaceState.update.mockResolvedValueOnce(undefined);
 
 			// Run
 			const result = await extensionState.startCodeReview('/path/to/repo', 'a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2', ['file2.txt', 'file3.txt'], 'file1.txt');
@@ -967,7 +983,7 @@ describe('ExtensionState', () => {
 				}
 			};
 			extensionContext.workspaceState.get.mockReturnValueOnce(codeReviews);
-			extensionContext.workspaceState.update.mockResolvedValueOnce(null);
+			extensionContext.workspaceState.update.mockResolvedValueOnce(undefined);
 
 			// Run
 			const result = await extensionState.startCodeReview('/path/to/repo', '1a2b3c4d5e6f1a2b3c4d5e6f1a2b3c4d5e6f1a2b', ['file5.txt', 'file6.txt'], 'file4.txt');
@@ -1025,7 +1041,7 @@ describe('ExtensionState', () => {
 				}
 			};
 			extensionContext.workspaceState.get.mockReturnValueOnce(codeReviews);
-			extensionContext.workspaceState.update.mockResolvedValueOnce(null);
+			extensionContext.workspaceState.update.mockResolvedValueOnce(undefined);
 
 			// Run
 			const result = await extensionState.endCodeReview('/path/to/repo', 'a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2');
@@ -1052,7 +1068,7 @@ describe('ExtensionState', () => {
 				}
 			};
 			extensionContext.workspaceState.get.mockReturnValueOnce(codeReviews);
-			extensionContext.workspaceState.update.mockResolvedValueOnce(null);
+			extensionContext.workspaceState.update.mockResolvedValueOnce(undefined);
 
 			// Run
 			const result = await extensionState.endCodeReview('/path/to/repo', 'a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2');
@@ -1082,7 +1098,7 @@ describe('ExtensionState', () => {
 				}
 			};
 			extensionContext.workspaceState.get.mockReturnValueOnce(codeReviews);
-			extensionContext.workspaceState.update.mockResolvedValueOnce(null);
+			extensionContext.workspaceState.update.mockResolvedValueOnce(undefined);
 
 			// Run
 			const result = await extensionState.endCodeReview('/path/to/repo', '1a2b3c4d5e6f1a2b3c4d5e6f1a2b3c4d5e6f1a2b');
@@ -1135,7 +1151,7 @@ describe('ExtensionState', () => {
 				}
 			};
 			extensionContext.workspaceState.get.mockReturnValueOnce(codeReviews);
-			extensionContext.workspaceState.update.mockResolvedValueOnce(null);
+			extensionContext.workspaceState.update.mockResolvedValueOnce(undefined);
 
 			// Run
 			const result = extensionState.getCodeReview('/path/to/repo', 'a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2');
@@ -1217,7 +1233,7 @@ describe('ExtensionState', () => {
 			};
 
 			extensionContext.workspaceState.get.mockReturnValueOnce(codeReviews);
-			extensionContext.workspaceState.update.mockResolvedValueOnce(null);
+			extensionContext.workspaceState.update.mockResolvedValueOnce(undefined);
 		});
 
 		it('Should update the reviewed files and change the last viewed file', async () => {
@@ -1353,7 +1369,7 @@ describe('ExtensionState', () => {
 				}
 			};
 			extensionContext.workspaceState.get.mockReturnValueOnce(codeReviews);
-			extensionContext.workspaceState.update.mockResolvedValueOnce(null);
+			extensionContext.workspaceState.update.mockResolvedValueOnce(undefined);
 
 			// Run
 			extensionState.expireOldCodeReviews();
@@ -1406,7 +1422,7 @@ describe('ExtensionState', () => {
 	describe('endAllWorkspaceCodeReviews', () => {
 		it('Should store the last active repository', () => {
 			// Setup
-			extensionContext.workspaceState.update.mockResolvedValueOnce(null);
+			extensionContext.workspaceState.update.mockResolvedValueOnce(undefined);
 
 			// Run
 			extensionState.endAllWorkspaceCodeReviews();

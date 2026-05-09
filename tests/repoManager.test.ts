@@ -1239,10 +1239,12 @@ describe('RepoManager', () => {
 				pullRequestConfig: null,
 				showRemoteBranches: true,
 				showRemoteBranchesV2: BooleanOverride.Default,
-				showStashes: BooleanOverride.Default,
-				showTags: BooleanOverride.Default,
-				workspaceFolderIndex: 0
-			};
+					simplifyByDecoration: BooleanOverride.Default,
+					showStashes: BooleanOverride.Default,
+					showTags: BooleanOverride.Default,
+					workspaceFolderIndex: 0,
+					isCdvSummaryHidden: false
+				};
 
 			// Run
 			repoManager.setRepoState('/path/to/workspace-folder1/repo2', newRepoState);
@@ -1908,11 +1910,13 @@ describe('RepoManager', () => {
 						pullRequestConfig: null,
 						showRemoteBranches: true,
 						showRemoteBranchesV2: BooleanOverride.Default,
-						showStashes: BooleanOverride.Default,
-						showTags: BooleanOverride.Default,
-						workspaceFolderIndex: 0
-					}
-				};
+							simplifyByDecoration: BooleanOverride.Default,
+							showStashes: BooleanOverride.Default,
+							showTags: BooleanOverride.Default,
+							workspaceFolderIndex: 0,
+							isCdvSummaryHidden: false
+						}
+					};
 				expected['/path/to/workspace-folder1/repo'][stateKey] = stateValue;
 				expect(repoManager.getRepos()).toStrictEqual(expected);
 				expect(spyOnSaveRepos).toHaveBeenCalledWith(expected);
@@ -2261,9 +2265,11 @@ describe('RepoManager', () => {
 					pullRequestConfig: null,
 					showRemoteBranches: true,
 					showRemoteBranchesV2: BooleanOverride.Default,
+					simplifyByDecoration: BooleanOverride.Default,
 					showStashes: BooleanOverride.Default,
 					showTags: BooleanOverride.Default,
-					workspaceFolderIndex: 0
+					workspaceFolderIndex: 0,
+					isCdvSummaryHidden: false
 				}
 			});
 
@@ -2339,9 +2345,11 @@ describe('RepoManager', () => {
 					pullRequestConfig: null,
 					showRemoteBranches: true,
 					showRemoteBranchesV2: BooleanOverride.Default,
+					simplifyByDecoration: BooleanOverride.Default,
 					showStashes: BooleanOverride.Default,
 					showTags: BooleanOverride.Default,
-					workspaceFolderIndex: 0
+					workspaceFolderIndex: 0,
+					isCdvSummaryHidden: false
 				}
 			});
 
