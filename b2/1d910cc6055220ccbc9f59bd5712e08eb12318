@@ -1,0 +1,24 @@
+web/rebaseViewMain.ts
+  s_796930e7a318af::t_fe744d8e442f86 8
+  s_796930e7a318af::t_fded9cd01f913a 20
+.vscode/package-web.js
+  s_796930e7a318af::t_18f853c864f8b7 30
+  s_796930e7a318af::t_7df57bfcc34988 1-29,31-65,68,70-74,85-87,91-174
+  s_796930e7a318af::t_e306c26e6d9530 66-67,69,75-84,88-90
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.4",
+  "base_commit_sha": "b21d910cc6055220ccbc9f59bd5712e08eb12318",
+  "prompts": {},
+  "sessions": {
+    "s_796930e7a318af": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "581b55d6-be18-43c8-8595-4ad7479cf101",
+        "model": "glm-5.1"
+      },
+      "human_author": "victorwwd <victorwwd@outlook.com>"
+    }
+  }
+}
