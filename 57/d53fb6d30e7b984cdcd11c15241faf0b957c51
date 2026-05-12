@@ -1,0 +1,22 @@
+web/main.ts
+  s_796930e7a318af::t_55b9d0b3bace27 42,1737,2236-2244,2248-2257
+  s_796930e7a318af::t_657e3bffe841eb 4136
+web/styles/main.css
+  s_796930e7a318af::t_49b83d4ba80cb8 1101-1126
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.4",
+  "base_commit_sha": "57d53fb6d30e7b984cdcd11c15241faf0b957c51",
+  "prompts": {},
+  "sessions": {
+    "s_796930e7a318af": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "581b55d6-be18-43c8-8595-4ad7479cf101",
+        "model": "glm-5.1"
+      },
+      "human_author": "victorwwd <victorwwd@outlook.com>"
+    }
+  }
+}
