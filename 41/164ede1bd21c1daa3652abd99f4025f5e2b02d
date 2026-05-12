@@ -1,0 +1,19 @@
+web/rebaseViewMain.ts
+  s_796930e7a318af::t_8b413272daee20 1-46
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.4",
+  "base_commit_sha": "41164ede1bd21c1daa3652abd99f4025f5e2b02d",
+  "prompts": {},
+  "sessions": {
+    "s_796930e7a318af": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "581b55d6-be18-43c8-8595-4ad7479cf101",
+        "model": "glm-5.1"
+      },
+      "human_author": "victorwwd <victorwwd@outlook.com>"
+    }
+  }
+}
