@@ -1,0 +1,22 @@
+docs/superpowers/specs/2026-05-12-rebase-order-and-runtime-message-prompt-design.md
+  s_7e77b59d36efc0::t_6694b1edcea920 1-103,105-209,211-218,220-225
+  s_7e77b59d36efc0::t_a79590cc1946aa 210
+  s_7e77b59d36efc0::t_b0b3222f066380 104
+  s_7e77b59d36efc0::t_ed054a026d1b18 219
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.4",
+  "base_commit_sha": "eaeb123fef846607398154867be2fa1bfb57f3a0",
+  "prompts": {},
+  "sessions": {
+    "s_7e77b59d36efc0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8141b02c-cfd7-46ab-bd4b-c5644bb5d2cd",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "victorwwd <victorwwd@outlook.com>"
+    }
+  }
+}
