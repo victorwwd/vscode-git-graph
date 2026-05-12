@@ -1,0 +1,22 @@
+web/rebaseStatusBar.ts
+  s_ad425f2ecb7287::t_7b5d96e8cfb846 68-78
+  s_ad425f2ecb7287::t_d95b898bd52400 118-131
+web/styles/rebasePanel.css
+  s_ad425f2ecb7287::t_4989b06f016f26 124-141
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.4",
+  "base_commit_sha": "4b06a67690eddfdae3c9727f514a770438b4289b",
+  "prompts": {},
+  "sessions": {
+    "s_ad425f2ecb7287": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "0f1e04b2-d3e6-46d6-9a26-f50e4b456b48",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "victorwwd <victorwwd@outlook.com>"
+    }
+  }
+}
