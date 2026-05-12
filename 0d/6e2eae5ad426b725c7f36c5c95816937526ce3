@@ -1,0 +1,24 @@
+web/styles/rebaseView.css
+  s_796930e7a318af::t_3d0fc1bab31921 1-10
+web/rebasePanel.ts
+  s_796930e7a318af::t_823ba0e4a666c7 26-30
+  s_796930e7a318af::t_9bbb20e230d837 72
+web/styles/rebasePanel.css
+  s_796930e7a318af::t_8a5d8d4d9f9f86 2-3
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.4",
+  "base_commit_sha": "0d6e2eae5ad426b725c7f36c5c95816937526ce3",
+  "prompts": {},
+  "sessions": {
+    "s_796930e7a318af": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "581b55d6-be18-43c8-8595-4ad7479cf101",
+        "model": "glm-5.1"
+      },
+      "human_author": "victorwwd <victorwwd@outlook.com>"
+    }
+  }
+}
