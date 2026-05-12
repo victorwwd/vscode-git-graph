@@ -1,0 +1,14 @@
+package.json
+  h_d0860d6ab27b0a 272-274,739-750
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.4",
+  "base_commit_sha": "3d1eb21fb8687017a07ea7aeabc4e879871552e8",
+  "prompts": {},
+  "humans": {
+    "h_d0860d6ab27b0a": {
+      "author": "victorwwd <victorwwd@outlook.com>"
+    }
+  }
+}
