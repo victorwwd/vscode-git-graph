@@ -1,0 +1,19 @@
+.gitattributes
+  s_36b3369fdfa44e::t_8f7ec1634be19e 2-3,6,8-26,29-33
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.4",
+  "base_commit_sha": "01000f0071de4740ec1e1b79fef8265e339ef057",
+  "prompts": {},
+  "sessions": {
+    "s_36b3369fdfa44e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a84676d2-bdf7-471a-b13b-b06b2d06936c",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "victorwwd <victorwwd@outlook.com>"
+    }
+  }
+}
