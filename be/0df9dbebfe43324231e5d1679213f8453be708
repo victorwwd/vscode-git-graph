@@ -1,0 +1,19 @@
+src/baseGitGraphView.ts
+  s_7e77b59d36efc0::t_39973803f1984a 703-704
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.4",
+  "base_commit_sha": "be0df9dbebfe43324231e5d1679213f8453be708",
+  "prompts": {},
+  "sessions": {
+    "s_7e77b59d36efc0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8141b02c-cfd7-46ab-bd4b-c5644bb5d2cd",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "victorwwd <victorwwd@outlook.com>"
+    }
+  }
+}
