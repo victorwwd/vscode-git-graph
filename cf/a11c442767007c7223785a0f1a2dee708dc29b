@@ -1,0 +1,23 @@
+src/extension.ts
+  s_796930e7a318af::t_f60d418c974fa4 54
+src/commands.ts
+  s_796930e7a318af::t_cc7361d5f4e6e4 151-152
+  s_796930e7a318af::t_282386711e7bf5 284,293,357
+  s_796930e7a318af::t_b47e4991e29ba6 27,42,50,130,295
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.4",
+  "base_commit_sha": "cfa11c442767007c7223785a0f1a2dee708dc29b",
+  "prompts": {},
+  "sessions": {
+    "s_796930e7a318af": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "581b55d6-be18-43c8-8595-4ad7479cf101",
+        "model": "glm-5.1"
+      },
+      "human_author": "victorwwd <victorwwd@outlook.com>"
+    }
+  }
+}
