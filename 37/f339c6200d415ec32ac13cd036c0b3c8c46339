@@ -1,0 +1,42 @@
+web/main.ts
+  s_8ec9062d17ca4a::t_7d0f3ccfd64cb3 4156
+package.json
+  h_d0860d6ab27b0a 4
+src/baseGitGraphView.ts
+  s_8ec9062d17ca4a::t_cd38e42b82d60f 34
+  s_8ec9062d17ca4a::t_c3c1fd3a4401bd 703-705
+  s_8ec9062d17ca4a::t_46ce6ef0aa7d77 734
+src/dataSource.ts
+  s_8ec9062d17ca4a::t_0e26204b809a47 1123,1139
+web/rebasePanel.ts
+  s_8ec9062d17ca4a::t_22071b03f144b2 89,91-93
+  s_8ec9062d17ca4a::t_4d570b19756208 6-12
+  s_8ec9062d17ca4a::t_737297bc42033d 33
+web/rebaseStatusBar.ts
+  s_8ec9062d17ca4a::t_140cf8aaa105d5 16,20,30,45,78-83,90,92-94,96,98-100,102-105,113-114,116
+tests/dataSource.rebase.test.ts
+  s_8ec9062d17ca4a::t_fd5ee62849b02e 79-80,89-90,94
+src/rebaseSession.ts
+  s_8ec9062d17ca4a::t_895bb60a717b26 36
+  s_8ec9062d17ca4a::t_11703222712398 54
+  s_8ec9062d17ca4a::t_117b5aa4e95313 52-53,55-66,69
+  s_8ec9062d17ca4a::t_c3e5a1b92eb4e6 208-215,218,231,237,241,244,253,258,262,266,274
+src/rebaseEditor/main.ts
+  s_8ec9062d17ca4a::t_cef521fe32751c 3,6
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.4",
+  "base_commit_sha": "37f339c6200d415ec32ac13cd036c0b3c8c46339",
+  "prompts": {},
+  "sessions": {
+    "s_8ec9062d17ca4a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "30ac8ae1-305a-4059-af12-87919608e31f",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "victorwwd <victorwwd@outlook.com>"
+    }
+  }
+}
