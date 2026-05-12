@@ -5953,7 +5953,7 @@ describe('DataSource', () => {
 			// Setup
 			jest.useRealTimers();
 			jest.useFakeTimers({ doNotFake: ['setTimeout', 'setInterval'] });
-			jest.spyOn(global, "setTimeout");
+			jest.spyOn(global, 'setTimeout');
 			const spyOnOpenGitTerminal = jest.spyOn(utils, 'openGitTerminal');
 			spyOnOpenGitTerminal.mockReturnValueOnce();
 			vscode.mockExtensionSettingReturnValue('repository.sign.commits', false);
@@ -5978,7 +5978,7 @@ describe('DataSource', () => {
 			// Setup
 			jest.useRealTimers();
 			jest.useFakeTimers({ doNotFake: ['setTimeout', 'setInterval'] });
-			jest.spyOn(global, "setTimeout");
+			jest.spyOn(global, 'setTimeout');
 			const spyOnOpenGitTerminal = jest.spyOn(utils, 'openGitTerminal');
 			spyOnOpenGitTerminal.mockReturnValueOnce();
 			vscode.mockExtensionSettingReturnValue('repository.sign.commits', false);
@@ -6003,7 +6003,7 @@ describe('DataSource', () => {
 			// Setup
 			jest.useRealTimers();
 			jest.useFakeTimers({ doNotFake: ['setTimeout', 'setInterval'] });
-			jest.spyOn(global, "setTimeout");
+			jest.spyOn(global, 'setTimeout');
 			const spyOnOpenGitTerminal = jest.spyOn(utils, 'openGitTerminal');
 			spyOnOpenGitTerminal.mockReturnValueOnce();
 			vscode.mockExtensionSettingReturnValue('repository.sign.commits', true);
@@ -6687,7 +6687,7 @@ describe('DataSource', () => {
 			// Setup
 			jest.useRealTimers();
 			jest.useFakeTimers({ doNotFake: ['setTimeout', 'setInterval'] });
-			jest.spyOn(global, "setTimeout");
+			jest.spyOn(global, 'setTimeout');
 			mockGitSuccessOnce();
 
 			// Run
@@ -6712,7 +6712,7 @@ describe('DataSource', () => {
 			// Setup
 			jest.useRealTimers();
 			jest.useFakeTimers({ doNotFake: ['setTimeout', 'setInterval'] });
-			jest.spyOn(global, "setTimeout");
+			jest.spyOn(global, 'setTimeout');
 			mockGitSuccessOnce();
 
 			// Run
@@ -6737,7 +6737,7 @@ describe('DataSource', () => {
 			// Setup
 			jest.useRealTimers();
 			jest.useFakeTimers({ doNotFake: ['setTimeout', 'setInterval'] });
-			jest.spyOn(global, "setTimeout");
+			jest.spyOn(global, 'setTimeout');
 			mockGitSuccessOnce();
 
 			// Run
@@ -6762,7 +6762,7 @@ describe('DataSource', () => {
 			// Setup
 			jest.useRealTimers();
 			jest.useFakeTimers({ doNotFake: ['setTimeout', 'setInterval'] });
-			jest.spyOn(global, "setTimeout");
+			jest.spyOn(global, 'setTimeout');
 			mockGitSuccessOnce();
 
 			// Run
@@ -6787,7 +6787,7 @@ describe('DataSource', () => {
 			// Setup
 			jest.useRealTimers();
 			jest.useFakeTimers({ doNotFake: ['setTimeout', 'setInterval'] });
-			jest.spyOn(global, "setTimeout");
+			jest.spyOn(global, 'setTimeout');
 			const spyOnOpenGitTerminal = jest.spyOn(utils, 'openGitTerminal');
 			spyOnOpenGitTerminal.mockReturnValueOnce();
 
@@ -6823,7 +6823,7 @@ describe('DataSource', () => {
 			// Setup
 			jest.useRealTimers();
 			jest.useFakeTimers({ doNotFake: ['setTimeout', 'setInterval'] });
-			jest.spyOn(global, "setTimeout");
+			jest.spyOn(global, 'setTimeout');
 			mockGitThrowingErrorOnce('line1\nline2\nline3');
 			vscode.window.showErrorMessage.mockResolvedValueOnce(null);
 
