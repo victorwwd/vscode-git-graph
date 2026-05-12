@@ -1,0 +1,16 @@
+package.json
+  h_d0860d6ab27b0a 4
+docs/TODO.md
+  h_d0860d6ab27b0a 1-36
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.4",
+  "base_commit_sha": "42124d12f88039ed8c3736badc79d4f429bdeba6",
+  "prompts": {},
+  "humans": {
+    "h_d0860d6ab27b0a": {
+      "author": "victorwwd <victorwwd@outlook.com>"
+    }
+  }
+}
