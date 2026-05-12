@@ -1,0 +1,14 @@
+.gitattributes
+  h_d0860d6ab27b0a 2-6
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.4",
+  "base_commit_sha": "9085e027112bdaa866806ade61e7dbbdde90ab4c",
+  "prompts": {},
+  "humans": {
+    "h_d0860d6ab27b0a": {
+      "author": "victorwwd <victorwwd@outlook.com>"
+    }
+  }
+}
