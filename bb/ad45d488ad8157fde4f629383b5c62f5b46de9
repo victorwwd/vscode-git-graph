@@ -1,0 +1,11 @@
+.editorconfig
+  h_d0860d6ab27b0a 1,3-7
+.gitattributes
+  h_d0860d6ab27b0a 2-6
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.4",
+  "base_commit_sha": "bbad45d488ad8157fde4f629383b5c62f5b46de9",
+  "prompts": {}
+}
