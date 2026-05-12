@@ -1,0 +1,26 @@
+src/gitGraphView.ts
+  s_ad425f2ecb7287::t_aabbcbc8556758 60-66
+src/baseGitGraphView.ts
+  s_ad425f2ecb7287::t_a80136668c0b47 121-129,135-144
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.4",
+  "base_commit_sha": "b7b47be646708d5f173ed051c052293a831c4b84",
+  "prompts": {},
+  "humans": {
+    "h_d0860d6ab27b0a": {
+      "author": "victorwwd <victorwwd@outlook.com>"
+    }
+  },
+  "sessions": {
+    "s_ad425f2ecb7287": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "0f1e04b2-d3e6-46d6-9a26-f50e4b456b48",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "victorwwd <victorwwd@outlook.com>"
+    }
+  }
+}
