@@ -73,6 +73,24 @@ async function build() {
 		treeShaking: true
 	});
 
+	// Step 3b: Build rebase editor script (separate entry, used as GIT_SEQUENCE_EDITOR / GIT_EDITOR)
+	console.log('Bundling rebase editor...');
+	await esbuild.build({
+		entryPoints: [path.join(SRC_DIR, 'rebaseEditor', 'main.ts')],
+		bundle: true,
+		outfile: path.join(OUT_DIR, 'rebaseEditor', 'main.js'),
+		external: [
+			'fs',
+			'path'
+		],
+		platform: 'node',
+		target: 'node18',
+		format: 'cjs',
+		sourcemap: true,
+		minify: false,
+		treeShaking: true
+	});
+
 	// Step 4: Copy askpass shell scripts to output directory
 	const askpassSrc = path.join(SRC_DIR, 'askpass');
 	const askpassOut = path.join(OUT_DIR, 'askpass');

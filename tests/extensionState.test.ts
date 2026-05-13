@@ -1458,4 +1458,76 @@ describe('ExtensionState', () => {
 			expect(result).toStrictEqual({});
 		});
 	});
+
+	describe('rebase session persistence', () => {
+		const sampleSession = {
+			repo: '/path/to/repo',
+			base: 'baseSha',
+			origHead: 'origSha',
+			plan: [],
+			tmpDir: '/tmp/x',
+			startedAt: 1
+		};
+
+		it('returns null when no session is stored for the repository', () => {
+			// Setup
+			extensionContext.workspaceState.get.mockReturnValueOnce({});
+
+			// Run
+			const result = extensionState.getRebaseSession('/path/to/repo');
+
+			// Assert
+			expect(extensionContext.workspaceState.get).toHaveBeenCalledWith('rebaseSessions', {});
+			expect(result).toBe(null);
+		});
+
+		it('returns the stored session for the repository', () => {
+			// Setup
+			extensionContext.workspaceState.get.mockReturnValueOnce({ '/path/to/repo': sampleSession });
+
+			// Run
+			const result = extensionState.getRebaseSession('/path/to/repo');
+
+			// Assert
+			expect(result).toEqual(sampleSession);
+		});
+
+		it('persists a new session', async () => {
+			// Setup
+			extensionContext.workspaceState.get.mockReturnValueOnce({});
+			extensionContext.workspaceState.update.mockResolvedValueOnce(undefined);
+
+			// Run
+			await extensionState.setRebaseSession('/path/to/repo', sampleSession);
+
+			// Assert
+			expect(extensionContext.workspaceState.update).toHaveBeenCalledWith('rebaseSessions', {
+				'/path/to/repo': sampleSession
+			});
+		});
+
+		it('clears the session for a repository', async () => {
+			// Setup
+			extensionContext.workspaceState.get.mockReturnValueOnce({ '/path/to/repo': sampleSession });
+			extensionContext.workspaceState.update.mockResolvedValueOnce(undefined);
+
+			// Run
+			await extensionState.clearRebaseSession('/path/to/repo');
+
+			// Assert
+			expect(extensionContext.workspaceState.update).toHaveBeenCalledWith('rebaseSessions', {});
+		});
+
+		it('is a no-op when there is no session to clear', async () => {
+			// Setup
+			extensionContext.workspaceState.get.mockReturnValueOnce({});
+
+			// Run
+			const result = await extensionState.clearRebaseSession('/path/to/repo');
+
+			// Assert
+			expect(extensionContext.workspaceState.update).not.toHaveBeenCalled();
+			expect(result).toBe(null);
+		});
+	});
 });

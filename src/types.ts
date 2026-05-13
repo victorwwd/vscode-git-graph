@@ -385,6 +385,7 @@ export interface ContextMenuActionsVisibility {
 		readonly editMessage: boolean;
 		readonly copyHash: boolean;
 		readonly copySubject: boolean;
+		readonly interactiveRebaseFromHere: boolean;
 	};
 	readonly commitDetailsViewFile: {
 		readonly viewDiff: boolean;
@@ -1179,6 +1180,119 @@ export interface ResponseRebase extends ResponseWithErrorInfo {
 	readonly interactive: boolean;
 }
 
+/* Interactive Rebase */
+
+export const enum RebaseAction {
+	Pick = 'pick',
+	Reword = 'reword',
+	Edit = 'edit',
+	Squash = 'squash',
+	Fixup = 'fixup',
+	Drop = 'drop'
+}
+
+export interface RebasePlanItem {
+	readonly oid: string;
+	readonly action: RebaseAction;
+	readonly subject: string;
+	readonly message: string | null;
+}
+
+export interface RebaseSessionState {
+	readonly repo: string;
+	readonly base: string;
+	readonly origHead: string;
+	readonly plan: ReadonlyArray<RebasePlanItem>;
+	readonly tmpDir: string;
+	readonly startedAt: number;
+}
+
+export const enum RebaseLiveStateKind {
+	Idle = 'idle',
+	Running = 'running',
+	Conflict = 'conflict',
+	EditStopped = 'edit-stopped',
+	Completed = 'completed',
+	Aborted = 'aborted'
+}
+
+export interface RebaseLiveStatus {
+	readonly state: RebaseLiveStateKind;
+	readonly progress: { readonly done: number; readonly total: number; readonly currentOid: string | null } | null;
+	readonly conflicts: ReadonlyArray<string>;
+	readonly origHead: string | null;
+	readonly canUndo: boolean;
+	readonly worktreeDirty: boolean;
+	readonly indexDirty: boolean;
+}
+
+export interface RebaseCandidate {
+	readonly oid: string;
+	readonly subject: string;
+}
+
+export interface RequestRebaseList extends RepoRequest {
+	readonly command: 'rebaseList';
+	readonly base: string;
+}
+export interface ResponseRebaseList extends ResponseWithErrorInfo {
+	readonly command: 'rebaseList';
+	readonly candidates: ReadonlyArray<RebaseCandidate>;
+}
+
+export interface RequestRebaseStart extends RepoRequest {
+	readonly command: 'rebaseStart';
+	readonly base: string;
+	readonly plan: ReadonlyArray<RebasePlanItem>;
+}
+export interface ResponseRebaseStart extends ResponseWithErrorInfo {
+	readonly command: 'rebaseStart';
+	readonly status: RebaseLiveStatus;
+}
+
+export const enum RebaseControlAction {
+	Continue = 'continue',
+	Skip = 'skip',
+	Abort = 'abort',
+	AmendContinue = 'amendContinue',
+	AmendRewordContinue = 'amendRewordContinue',
+	Undo = 'undo'
+}
+
+export interface RequestRebaseControl extends RepoRequest {
+	readonly command: 'rebaseControl';
+	readonly action: RebaseControlAction;
+}
+export interface ResponseRebaseControl extends ResponseWithErrorInfo {
+	readonly command: 'rebaseControl';
+	readonly action: RebaseControlAction;
+	readonly status: RebaseLiveStatus;
+}
+
+export interface ResponseRebaseStatus extends ResponseWithErrorInfo {
+	readonly command: 'rebaseStatus';
+	readonly repo: string;
+	readonly status: RebaseLiveStatus;
+}
+
+/** Push from backend to webview asking the user to confirm / edit a commit
+ * message during an interactive rebase (reword / squash / continue after a
+ * conflict). The webview must reply with a RequestRebasePromptResponse using
+ * the same promptId. The backend's git child process is blocked until then.
+ */
+export interface ResponseRebasePrompt extends BaseMessage {
+	readonly command: 'rebasePrompt';
+	readonly repo: string;
+	readonly promptId: string;
+	readonly defaultMessage: string;
+}
+export interface RequestRebasePromptResponse extends BaseMessage {
+	readonly command: 'rebasePromptResponse';
+	readonly promptId: string;
+	readonly accepted: boolean;
+	readonly message: string;
+}
+
 export interface ResponseRefresh extends BaseMessage {
 	readonly command: 'refresh';
 }
@@ -1392,6 +1506,10 @@ export type RequestMessage =
 	| RequestPushStash
 	| RequestPushTag
 	| RequestRebase
+	| RequestRebaseControl
+	| RequestRebaseList
+	| RequestRebasePromptResponse
+	| RequestRebaseStart
 	| RequestRenameBranch
 	| RequestRescanForRepos
 	| RequestResetFileToRevision
@@ -1461,6 +1579,11 @@ export type ResponseMessage =
 	| ResponsePushStash
 	| ResponsePushTag
 	| ResponseRebase
+	| ResponseRebaseControl
+	| ResponseRebaseList
+	| ResponseRebasePrompt
+	| ResponseRebaseStart
+	| ResponseRebaseStatus
 	| ResponseRefresh
 	| ResponseRenameBranch
 	| ResponseResetFileToRevision

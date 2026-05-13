@@ -6,6 +6,7 @@ import { getConfig } from './config';
 import { DataSource } from './dataSource';
 import { ExtensionState } from './extensionState';
 import { Logger } from './logger';
+import { RebaseSession } from './rebaseSession';
 import { RepoManager } from './repoManager';
 import { LoadGitGraphViewTo, TabIconColourTheme } from './types';
 import { toDisposable } from './utils/disposable';
@@ -28,7 +29,7 @@ export class GitGraphView extends BaseGitGraphView {
 	 * @param logger The Git Graph Logger instance.
 	 * @param loadViewTo What to load the view to.
 	 */
-	public static createOrShow(extensionPath: string, dataSource: DataSource, extensionState: ExtensionState, avatarManager: AvatarManager, repoManager: RepoManager, logger: Logger, loadViewTo: LoadGitGraphViewTo) {
+	public static createOrShow(extensionPath: string, dataSource: DataSource, extensionState: ExtensionState, avatarManager: AvatarManager, repoManager: RepoManager, rebaseSession: RebaseSession, logger: Logger, loadViewTo: LoadGitGraphViewTo) {
 		const column = vscode.window.activeTextEditor ? vscode.window.activeTextEditor.viewColumn : undefined;
 
 		if (GitGraphView.currentPanel) {
@@ -37,7 +38,7 @@ export class GitGraphView extends BaseGitGraphView {
 			GitGraphView.currentPanel.panel.reveal(column);
 		} else {
 			// If Git Graph panel doesn't already exist
-			GitGraphView.currentPanel = new GitGraphView(extensionPath, dataSource, extensionState, avatarManager, repoManager, logger, loadViewTo, column);
+			GitGraphView.currentPanel = new GitGraphView(extensionPath, dataSource, extensionState, avatarManager, repoManager, rebaseSession, logger, loadViewTo, column);
 		}
 	}
 
@@ -56,6 +57,14 @@ export class GitGraphView extends BaseGitGraphView {
 	}
 
 	/**
+	 * The editor-tab view honours the retainContextWhenHidden config, so the
+	 * webview keeps its DOM across tab switches.
+	 */
+	protected isContextRetained(): boolean {
+		return getConfig().retainContextWhenHidden;
+	}
+
+	/**
 	 * Creates a Git Graph View.
 	 * @param extensionPath The absolute file path of the directory containing the extension.
 	 * @param dataSource The Git Graph DataSource instance.
@@ -66,8 +75,8 @@ export class GitGraphView extends BaseGitGraphView {
 	 * @param loadViewTo What to load the view to.
 	 * @param column The column the view should be loaded in.
 	 */
-	private constructor(extensionPath: string, dataSource: DataSource, extensionState: ExtensionState, avatarManager: AvatarManager, repoManager: RepoManager, logger: Logger, loadViewTo: LoadGitGraphViewTo, column: vscode.ViewColumn | undefined) {
-		super(extensionPath, dataSource, extensionState, avatarManager, repoManager, logger, loadViewTo);
+	private constructor(extensionPath: string, dataSource: DataSource, extensionState: ExtensionState, avatarManager: AvatarManager, repoManager: RepoManager, rebaseSession: RebaseSession, logger: Logger, loadViewTo: LoadGitGraphViewTo, column: vscode.ViewColumn | undefined) {
+		super(extensionPath, dataSource, extensionState, avatarManager, repoManager, rebaseSession, logger, loadViewTo);
 
 		const config = getConfig();
 		this.panel = vscode.window.createWebviewPanel('git-graph', 'Git Graph', column || vscode.ViewColumn.One, {

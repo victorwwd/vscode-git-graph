@@ -269,6 +269,10 @@
 								"copySubject": {
 									"type": "boolean",
 									"title": "Copy Commit Subject to Clipboard"
+								},
+								"interactiveRebaseFromHere": {
+									"type": "boolean",
+									"title": "Interactive Rebase from here..."
 								}
 							}
 						},
@@ -731,6 +735,15 @@
 					"type": "boolean",
 					"default": false,
 					"description": "Checkbox \"Interactive Rebase (launch in new Terminal)\" active by default."
+				},
+				"git-graph.dialog.interactiveRebase.defaultAction": {
+					"type": "string",
+					"enum": [
+						"pick",
+						"reword"
+					],
+					"default": "pick",
+					"description": "Default action assigned to each commit when opening the Interactive Rebase panel."
 				},
 				"git-graph.dialog.resetCurrentBranchToCommit.mode": {
 					"type": "string",

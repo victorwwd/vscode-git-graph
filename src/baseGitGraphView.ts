@@ -5,9 +5,10 @@ import { getConfig } from './config';
 import { DataSource, GitConfigKey } from './dataSource';
 import { ExtensionState } from './extensionState';
 import { Logger } from './logger';
+import { RebaseSession } from './rebaseSession';
 import { RepoFileWatcher } from './repoFileWatcher';
 import { RepoManager } from './repoManager';
-import { ErrorInfo, GitConfigLocation, GitGraphViewInitialState, GitPushBranchMode, GitRepoSet, LoadGitGraphViewTo, RequestDropCommits, RequestMessage, RequestSquashCommits, ResponseMessage } from './types';
+import { ErrorInfo, GitConfigLocation, GitGraphViewInitialState, GitPushBranchMode, GitRepoSet, LoadGitGraphViewTo, RebaseLiveStatus, RequestDropCommits, RequestMessage, RequestSquashCommits, ResponseMessage } from './types';
 import { UNABLE_TO_FIND_GIT_MSG, UNCOMMITTED, archive, copyFilePathToClipboard, copyToClipboard, createPullRequest, getNonce, openExtensionSettings, openExternalUrl, openFile, showErrorMessage, viewDiff, viewDiffWithWorkingFile, viewFileAtRevision, viewScm } from './utils';
 import { Disposable, toDisposable } from './utils/disposable';
 
@@ -19,6 +20,7 @@ export abstract class BaseGitGraphView extends Disposable {
 	protected readonly avatarManager: AvatarManager;
 	protected readonly dataSource: DataSource;
 	protected readonly extensionState: ExtensionState;
+	protected readonly rebaseSession: RebaseSession;
 	protected readonly repoFileWatcher: RepoFileWatcher;
 	protected readonly repoManager: RepoManager;
 	protected readonly logger: Logger;
@@ -29,6 +31,7 @@ export abstract class BaseGitGraphView extends Disposable {
 
 	private loadRepoInfoRefreshId: number = 0;
 	private loadCommitsRefreshId: number = 0;
+	private lastRebaseStatus: { [repo: string]: string } = {};
 
 	/**
 	 * Get the webview instance.
@@ -50,12 +53,13 @@ export abstract class BaseGitGraphView extends Disposable {
 	 * @param logger The Git Graph Logger instance.
 	 * @param loadViewTo What to load the view to.
 	 */
-	protected constructor(extensionPath: string, dataSource: DataSource, extensionState: ExtensionState, avatarManager: AvatarManager, repoManager: RepoManager, logger: Logger, loadViewTo: LoadGitGraphViewTo) {
+	protected constructor(extensionPath: string, dataSource: DataSource, extensionState: ExtensionState, avatarManager: AvatarManager, repoManager: RepoManager, rebaseSession: RebaseSession, logger: Logger, loadViewTo: LoadGitGraphViewTo) {
 		super();
 		this.extensionPath = extensionPath;
 		this.avatarManager = avatarManager;
 		this.dataSource = dataSource;
 		this.extensionState = extensionState;
+		this.rebaseSession = rebaseSession;
 		this.repoManager = repoManager;
 		this.logger = logger;
 		this.loadViewTo = loadViewTo;
@@ -72,6 +76,14 @@ export abstract class BaseGitGraphView extends Disposable {
 	 * Initialize common event handlers and update the view.
 	 */
 	protected initializeCommon() {
+		// Wire the rebase session's prompt channel to this view. The notifier
+		// is single-tenant: whichever view is currently active claims it. When
+		// the view is disposed we clear the notifier so we don't post into a
+		// dead webview.
+		this.rebaseSession.setPromptNotifier((msg) => this.sendMessage(msg));
+		this.registerDisposable(toDisposable(() => {
+			this.rebaseSession.setPromptNotifier(null);
+		}));
 		this.registerDisposables(
 			// Subscribe to events triggered when a repository is added or deleted from Git Graph
 			this.repoManager.onDidChangeRepos((event) => {
@@ -115,18 +127,30 @@ export abstract class BaseGitGraphView extends Disposable {
 	}
 
 	/**
+	 * Whether the webview keeps its DOM and script state while hidden. When true,
+	 * visibility transitions must NOT re-render or tear down backend state — doing
+	 * so would destroy transient UI (e.g. the interactive rebase panel) that lives
+	 * only in the webview.
+	 */
+	protected isContextRetained(): boolean {
+		return false;
+	}
+
+	/**
 	 * Handle visibility changes.
 	 * @param visible Whether the view is now visible.
 	 */
 	protected onDidChangeVisibility(visible: boolean) {
-		if (visible !== this.isPanelVisible) {
-			if (visible) {
-				this.update();
-			} else {
-				this.currentRepo = null;
-				this.repoFileWatcher.stop();
-			}
-			this.isPanelVisible = visible;
+		if (visible === this.isPanelVisible) return;
+		this.isPanelVisible = visible;
+
+		if (this.isContextRetained()) return;
+
+		if (visible) {
+			this.update();
+		} else {
+			this.currentRepo = null;
+			this.repoFileWatcher.stop();
 		}
 	}
 
@@ -541,6 +565,38 @@ export abstract class BaseGitGraphView extends Disposable {
 					error: await this.dataSource.rebase(msg.repo, msg.obj, msg.actionOn, msg.ignoreDate, msg.interactive)
 				});
 				break;
+			case 'rebaseControl': {
+				const result = await this.rebaseSession.control(msg.repo, msg.action);
+				this.sendMessage({
+					command: 'rebaseControl',
+					action: msg.action,
+					error: result.error,
+					status: result.status
+				});
+				break;
+			}
+			case 'rebaseList': {
+				const listResult = await this.dataSource.listRebaseCandidates(msg.repo, msg.base);
+				this.sendMessage({
+					command: 'rebaseList',
+					error: listResult.error,
+					candidates: listResult.candidates
+				});
+				break;
+			}
+			case 'rebasePromptResponse': {
+				this.rebaseSession.resolvePromptResponse(msg.promptId, msg.accepted, msg.message);
+				break;
+			}
+			case 'rebaseStart': {
+				const startResult = await this.rebaseSession.start(msg.repo, msg.base, msg.plan);
+				this.sendMessage({
+					command: 'rebaseStart',
+					error: startResult.error,
+					status: startResult.status
+				});
+				break;
+			}
 			case 'renameBranch':
 				this.sendMessage({
 					command: 'renameBranch',
@@ -652,6 +708,17 @@ export abstract class BaseGitGraphView extends Disposable {
 	}
 
 	/**
+	 * Push a rebase status update to the webview. Called by the activation-time resume
+	 * hook so the front-end can repaint the status bar after a VS Code reload.
+	 */
+	public broadcastRebaseStatus(repo: string, status: RebaseLiveStatus) {
+		const serialized = JSON.stringify(status);
+		if (this.lastRebaseStatus[repo] === serialized) return;
+		this.lastRebaseStatus[repo] = serialized;
+		this.sendMessage({ command: 'rebaseStatus', repo: repo, status: status, error: null });
+	}
+
+	/**
 	 * Send a message to the front-end.
 	 * @param msg The message to be sent.
 	 */
@@ -676,6 +743,7 @@ export abstract class BaseGitGraphView extends Disposable {
 	 * Update the HTML document loaded in the Webview.
 	 */
 	protected update() {
+		this.lastRebaseStatus = {};
 		this.webview.html = this.getHtmlForWebview();
 	}
 

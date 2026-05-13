@@ -5,6 +5,7 @@ import { BaseGitGraphView } from './baseGitGraphView';
 import { DataSource } from './dataSource';
 import { ExtensionState } from './extensionState';
 import { Logger } from './logger';
+import { RebaseSession } from './rebaseSession';
 import { RepoManager } from './repoManager';
 import { LoadGitGraphViewTo } from './types';
 import { toDisposable } from './utils/disposable';
@@ -27,6 +28,7 @@ export class GitGraphPanelView extends BaseGitGraphView implements vscode.Webvie
 		extensionState: ExtensionState,
 		avatarManager: AvatarManager,
 		repoManager: RepoManager,
+		rebaseSession: RebaseSession,
 		logger: Logger
 	): GitGraphPanelView {
 		if (!GitGraphPanelView.instance) {
@@ -36,6 +38,7 @@ export class GitGraphPanelView extends BaseGitGraphView implements vscode.Webvie
 				extensionState,
 				avatarManager,
 				repoManager,
+				rebaseSession,
 				logger
 			);
 		}
@@ -68,9 +71,10 @@ export class GitGraphPanelView extends BaseGitGraphView implements vscode.Webvie
 		extensionState: ExtensionState,
 		avatarManager: AvatarManager,
 		repoManager: RepoManager,
+		rebaseSession: RebaseSession,
 		logger: Logger
 	) {
-		super(extensionPath, dataSource, extensionState, avatarManager, repoManager, logger, null);
+		super(extensionPath, dataSource, extensionState, avatarManager, repoManager, rebaseSession, logger, null);
 		this.registerDisposables(
 			toDisposable(() => {
 				GitGraphPanelView.instance = undefined;

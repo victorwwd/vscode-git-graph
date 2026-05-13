@@ -2,7 +2,7 @@ import * as fs from 'fs';
 import * as vscode from 'vscode';
 import { Avatar, AvatarCache } from './avatarManager';
 import { getConfig } from './config';
-import { BooleanOverride, CodeReview, ErrorInfo, FileViewType, GitGraphViewGlobalState, GitGraphViewWorkspaceState, GitRepoSet, GitRepoState, RepoCommitOrdering } from './types';
+import { BooleanOverride, CodeReview, ErrorInfo, FileViewType, GitGraphViewGlobalState, GitGraphViewWorkspaceState, GitRepoSet, GitRepoState, RebaseSessionState, RepoCommitOrdering } from './types';
 import { GitExecutable, getPathFromStr } from './utils';
 import { Disposable } from './utils/disposable';
 import { Event } from './utils/event';
@@ -14,6 +14,7 @@ const GLOBAL_VIEW_STATE = 'globalViewState';
 const IGNORED_REPOS = 'ignoredRepos';
 const LAST_ACTIVE_REPO = 'lastActiveRepo';
 const LAST_KNOWN_GIT_PATH = 'lastKnownGitPath';
+const REBASE_SESSIONS = 'rebaseSessions';
 const REPO_STATES = 'repoStates';
 const WORKSPACE_VIEW_STATE = 'workspaceViewState';
 
@@ -59,6 +60,8 @@ export interface CodeReviewData {
 	remainingFiles: string[];
 }
 export type CodeReviews = { [repo: string]: { [id: string]: CodeReviewData } };
+
+export type RebaseSessions = { [repo: string]: RebaseSessionState };
 
 /**
  * Manages the Git Graph Extension State, which stores data in both the Visual Studio Code Global & Workspace State.
@@ -433,6 +436,41 @@ export class ExtensionState extends Disposable {
 	 */
 	private setCodeReviews(reviews: CodeReviews) {
 		return this.updateWorkspaceState(CODE_REVIEWS, reviews);
+	}
+
+
+	/* Rebase Sessions */
+
+	/**
+	 * Get the persisted rebase session for a repository, if any.
+	 * @param repo The path of the repository.
+	 * @returns The stored session state, or null.
+	 */
+	public getRebaseSession(repo: string): RebaseSessionState | null {
+		const sessions = this.workspaceState.get<RebaseSessions>(REBASE_SESSIONS, {});
+		return sessions[repo] || null;
+	}
+
+	/**
+	 * Persist the rebase session for a repository.
+	 * @param repo The path of the repository.
+	 * @param session The session state to store.
+	 */
+	public setRebaseSession(repo: string, session: RebaseSessionState): Thenable<ErrorInfo> {
+		const sessions = this.workspaceState.get<RebaseSessions>(REBASE_SESSIONS, {});
+		sessions[repo] = session;
+		return this.updateWorkspaceState(REBASE_SESSIONS, sessions);
+	}
+
+	/**
+	 * Remove the persisted rebase session for a repository, if present.
+	 * @param repo The path of the repository.
+	 */
+	public clearRebaseSession(repo: string): Thenable<ErrorInfo> {
+		const sessions = this.workspaceState.get<RebaseSessions>(REBASE_SESSIONS, {});
+		if (!sessions[repo]) return Promise.resolve(null);
+		delete sessions[repo];
+		return this.updateWorkspaceState(REBASE_SESSIONS, sessions);
 	}
 
 

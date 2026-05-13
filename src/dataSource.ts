@@ -6,7 +6,7 @@ import * as vscode from 'vscode';
 import { AskpassEnvironment, AskpassManager } from './askpass/askpassManager';
 import { getConfig } from './config';
 import { Logger } from './logger';
-import { ActionedUser, CommitOrdering, DateType, DeepWriteable, ErrorInfo, ErrorInfoExtensionPrefix, GitCommit, GitCommitDetails, GitCommitStash, GitConfigLocation, GitFileChange, GitFileStatus, GitPushBranchMode, GitRepoConfig, GitRepoConfigBranches, GitResetMode, GitSignature, GitSignatureStatus, GitStash, GitTagDetails, MergeActionOn, RebaseActionOn, SquashMessageFormat, TagSorting, TagType, Writeable } from './types';
+import { ActionedUser, CommitOrdering, DateType, DeepWriteable, ErrorInfo, ErrorInfoExtensionPrefix, GitCommit, GitCommitDetails, GitCommitStash, GitConfigLocation, GitFileChange, GitFileStatus, GitPushBranchMode, GitRepoConfig, GitRepoConfigBranches, GitResetMode, GitSignature, GitSignatureStatus, GitStash, GitTagDetails, MergeActionOn, RebaseActionOn, RebaseCandidate, SquashMessageFormat, TagSorting, TagType, Writeable } from './types';
 import { GitExecutable, GitVersionRequirement, UNABLE_TO_FIND_GIT_MSG, UNCOMMITTED, abbrevCommit, constructIncompatibleGitVersionMessage, doesVersionMeetRequirement, getPathFromStr, getPathFromUri, openGitTerminal, pathWithTrailingSlash, realpath, resolveSpawnOutput, showErrorMessage } from './utils';
 import { Disposable } from './utils/disposable';
 import { Event } from './utils/event';
@@ -1112,6 +1112,204 @@ export class DataSource extends Disposable {
 		}
 	}
 
+	/**
+	 * List the commits between `base` and `HEAD` (exclusive..inclusive) for use as
+	 * candidates in an interactive rebase plan.
+	 * @param repo The path of the repository.
+	 * @param base The commit to rebase onto (exclusive lower bound).
+	 * @returns The candidates in oldest-to-newest order, with any git error.
+	 */
+	public listRebaseCandidates(repo: string, base: string): Promise<{ candidates: RebaseCandidate[]; error: ErrorInfo }> {
+		const args = ['log', '--reverse', '--format=%H%x00%s%x1e', base + '..HEAD'];
+		return this.spawnGit(args, repo, (stdout) => stdout).then(
+			(stdout) => ({ candidates: this.parseRebaseCandidates(stdout), error: null }),
+			(error: string) => ({ candidates: [], error })
+		);
+	}
+
+	private parseRebaseCandidates(stdout: string): RebaseCandidate[] {
+		return stdout
+			.split('\x1e')
+			.map((entry) => entry.replace(/^\n/, ''))
+			.filter((entry) => entry.length > 0)
+			.map((entry) => {
+				const parts = entry.split('\x00');
+				return {
+					oid: parts[0] || '',
+					subject: parts[1] || ''
+				};
+			});
+	}
+
+	/**
+	 * Continue an in-progress rebase, with the supplied env (typically containing
+	 * GIT_SEQUENCE_EDITOR / GIT_EDITOR pointing at the rebase editor script so that
+	 * any pending reword/squash messages are applied without a terminal).
+	 */
+	public rebaseContinue(repo: string, env: NodeJS.ProcessEnv): Promise<ErrorInfo> {
+		return this.runGitCommandWithEnv(['rebase', '--continue'], repo, env);
+	}
+
+	/**
+	 * Skip the current rebase step.
+	 */
+	public rebaseSkip(repo: string): Promise<ErrorInfo> {
+		return this.runGitCommand(['rebase', '--skip'], repo);
+	}
+
+	/**
+	 * Abort an in-progress rebase.
+	 */
+	public rebaseAbort(repo: string): Promise<ErrorInfo> {
+		return this.runGitCommand(['rebase', '--abort'], repo);
+	}
+
+	/**
+	 * Amend the current commit (no message change) then continue the rebase.
+	 * Used after `edit` stops to fold the user's working-tree changes into the
+	 * commit being edited. `-a` auto-stages tracked modifications so users don't
+	 * have to run `git add` manually. When the working tree is already clean,
+	 * the amend is skipped to avoid producing an empty (hash-churning) rewrite.
+	 */
+	public async rebaseAmendContinue(repo: string, env: NodeJS.ProcessEnv): Promise<ErrorInfo> {
+		if (await this.isWorkingTreeClean(repo)) {
+			return this.runGitCommandWithEnv(['rebase', '--continue'], repo, env);
+		}
+		const amendArgs = ['commit', '--amend', '--no-edit', '-a'];
+		if (getConfig().signCommits) amendArgs.push('-S');
+		const amendError = await this.runGitCommand(amendArgs, repo);
+		if (amendError !== null) return amendError;
+		return this.runGitCommandWithEnv(['rebase', '--continue'], repo, env);
+	}
+
+	/**
+	 * Amend the current commit with the supplied message file, auto-staging
+	 * tracked modifications, then continue the rebase. Used after `edit` stops
+	 * when the user wants to change both code and commit message at once.
+	 */
+	public async rebaseAmendRewordContinue(repo: string, msgPath: string, env: NodeJS.ProcessEnv): Promise<ErrorInfo> {
+		const amendArgs = ['commit', '--amend', '-a', '-F', msgPath];
+		if (getConfig().signCommits) amendArgs.push('-S');
+		const amendError = await this.runGitCommand(amendArgs, repo);
+		if (amendError !== null) return amendError;
+		return this.runGitCommandWithEnv(['rebase', '--continue'], repo, env);
+	}
+
+	/**
+	 * Hard-reset HEAD back to the snapshot taken before an interactive rebase.
+	 * Used to implement "Undo last rebase".
+	 */
+	public undoLastRebase(repo: string, origHead: string): Promise<ErrorInfo> {
+		return this.runGitCommand(['reset', '--hard', origHead], repo);
+	}
+
+	/**
+	 * Start an interactive rebase onto `base`. The caller provides env variables
+	 * (typically GIT_SEQUENCE_EDITOR + GIT_EDITOR) so that the rebase runs
+	 * non-interactively, driven by the rebase editor script.
+	 */
+	public startInteractiveRebase(repo: string, base: string, env: NodeJS.ProcessEnv): Promise<ErrorInfo> {
+		const args = ['rebase', '-i'];
+		if (getConfig().signCommits) args.push('-S');
+		args.push(base);
+		return this.runGitCommandWithEnv(args, repo, env);
+	}
+
+	/**
+	 * Inspect the working repository to determine whether an interactive rebase is in progress.
+	 * Returns 'idle' if no rebase state directory is present; otherwise the live state, the
+	 * progress (msgnum / end), the SHA being applied, and any conflicted file paths.
+	 */
+	public async getRebaseStatus(repo: string): Promise<{
+		state: 'idle' | 'running' | 'conflict' | 'edit-stopped';
+		progress: { done: number; total: number; currentOid: string | null } | null;
+		conflicts: string[];
+	}> {
+		const mergeDir = path.join(repo, '.git', 'rebase-merge');
+		const applyDir = path.join(repo, '.git', 'rebase-apply');
+
+		const inMerge = fs.existsSync(mergeDir);
+		const inApply = fs.existsSync(applyDir);
+		if (!inMerge && !inApply) {
+			return { state: 'idle', progress: null, conflicts: [] };
+		}
+
+		const stateDir = inMerge ? mergeDir : applyDir;
+		let done = 0;
+		let total = 0;
+		try {
+			done = parseInt(fs.readFileSync(path.join(stateDir, 'msgnum'), 'utf8'), 10) || 0;
+		} catch (_) { /* file may not exist yet */ }
+		try {
+			total = parseInt(fs.readFileSync(path.join(stateDir, 'end'), 'utf8'), 10) || 0;
+		} catch (_) { /* file may not exist yet */ }
+
+		let currentOid: string | null = null;
+		try {
+			currentOid = fs.readFileSync(path.join(stateDir, 'stopped-sha'), 'utf8').trim() || null;
+		} catch (_) { /* stopped-sha only exists when paused for edit/conflict */ }
+
+		const status = await this.spawnGit(['status', '--porcelain'], repo, (stdout) => stdout);
+		const conflicts = status
+			.split('\n')
+			.filter((line) => /^(UU|AA|DD|AU|UA|DU|UD)\s/.test(line))
+			.map((line) => line.slice(3).trim());
+
+		const isEditStopped = inMerge && conflicts.length === 0 && currentOid !== null;
+		const state: 'running' | 'conflict' | 'edit-stopped' = isEditStopped
+			? 'edit-stopped'
+			: conflicts.length > 0
+				? 'conflict'
+				: 'running';
+
+		return { state, progress: { done, total, currentOid }, conflicts };
+	}
+
+	/**
+	 * Whether the working tree (and index) has no uncommitted changes.
+	 * `git diff --quiet` exits 0 when clean and 1 when dirty; we map that exit code to a boolean.
+	 */
+	public isWorkingTreeClean(repo: string): Promise<boolean> {
+		return this.getWorkingTreeDirt(repo).then(({ worktreeDirty, indexDirty }) => !worktreeDirty && !indexDirty);
+	}
+
+	/**
+	 * Report worktree-only (unstaged) and index-only (staged-but-uncommitted) dirtiness separately.
+	 * `git rebase --continue` happily commits staged changes, so the UI wants to distinguish them.
+	 */
+	public getWorkingTreeDirt(repo: string): Promise<{ worktreeDirty: boolean; indexDirty: boolean }> {
+		const probe = (args: string[]) =>
+			this._spawnGit(args, repo, () => true).then(
+				() => false,
+				() => true
+			);
+		return Promise.all([
+			probe(['diff', '--quiet']),
+			probe(['diff', '--cached', '--quiet'])
+		]).then(([worktreeDirty, indexDirty]) => ({ worktreeDirty, indexDirty }));
+	}
+
+	/**
+	 * Whether HEAD is detached (not pointing at a branch).
+	 */
+	public isDetachedHead(repo: string): Promise<boolean> {
+		return this.spawnGit(['symbolic-ref', '--quiet', 'HEAD'], repo, () => false).catch(() => true);
+	}
+
+	/**
+	 * Resolve a ref to its full commit SHA.
+	 */
+	public resolveRef(repo: string, ref: string): Promise<string> {
+		return this.spawnGit(['rev-parse', ref], repo, (stdout) => stdout.trim());
+	}
+
+	/**
+	 * Read the full commit message (subject + body) of a ref.
+	 */
+	public getCommitMessage(repo: string, ref: string): Promise<string> {
+		return this.spawnGit(['log', '-1', '--pretty=%B', ref], repo, (stdout) => stdout.replace(/\r?\n$/, ''));
+	}
+
 
 	/* Git Action Methods - Branches & Tags */
 
@@ -2097,6 +2295,27 @@ export class DataSource extends Disposable {
 	 */
 	private runGitCommand(args: string[], repo: string): Promise<ErrorInfo> {
 		return this._spawnGit(args, repo, () => null).catch((errorMessage: string) => errorMessage);
+	}
+
+	/**
+	 * Run a Git command with extra environment variables merged onto the existing askpass env.
+	 * Used for interactive rebase, which sets GIT_SEQUENCE_EDITOR / GIT_EDITOR to a scripted helper.
+	 */
+	private runGitCommandWithEnv(args: string[], repo: string, env: NodeJS.ProcessEnv): Promise<ErrorInfo> {
+		return new Promise<ErrorInfo>((resolve) => {
+			if (this.gitExecutable === null) return resolve(UNABLE_TO_FIND_GIT_MSG);
+			const mergedEnv = Object.assign({}, process.env, this.askpassEnv, env);
+			resolveSpawnOutput(cp.spawn(this.gitExecutable.path, args, { cwd: repo, env: mergedEnv }))
+				.then((values) => {
+					const status = values[0], stdout = values[1], stderr = values[2];
+					if (status.code === 0) {
+						resolve(null);
+					} else {
+						resolve(getErrorMessage(status.error, stdout, stderr));
+					}
+				});
+			this.logger.logCmd('git', args);
+		});
 	}
 
 	/**

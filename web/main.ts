@@ -39,6 +39,10 @@ class GitGraphView {
 	private maxCommits: number;
 	private scrollTop = 0;
 	private renderedGitBranchHead: string | null = null;
+	private pendingRebaseBase: string | null = null;
+	private lastAppliedRebaseState: GG.RebaseLiveStateKind | null = null;
+	private readonly rebasePanel: RebasePanel = new RebasePanel();
+	private readonly rebaseStatusBar: RebaseStatusBar;
 
 	private lastScrollToStash: {
 		time: number,
@@ -68,6 +72,7 @@ class GitGraphView {
 		this.config = initialState.config;
 		this.maxCommits = this.config.initialLoadCommits;
 		this.viewElem = viewElem;
+		this.rebaseStatusBar = new RebaseStatusBar(viewElem);
 		this.currentRepoRefreshState = {
 			inProgress: false,
 			hard: true,
@@ -1731,6 +1736,10 @@ class GitGraphView {
 				visible: visibility.rebase,
 				onClick: () => this.rebaseAction(hash, abbrevCommit(hash), GG.RebaseActionOn.Commit, target)
 			}, {
+				title: 'Interactive Rebase from here' + ELLIPSIS,
+				visible: visibility.interactiveRebaseFromHere,
+				onClick: () => this.openInteractiveRebasePanel(hash)
+			}, {
 				title: 'Reset current branch to this Commit' + ELLIPSIS,
 				visible: visibility.reset,
 				onClick: () => {
@@ -2228,6 +2237,89 @@ class GitGraphView {
 		}, target);
 	}
 
+	public openInteractiveRebasePanel(base: string) {
+		this.pendingRebaseBase = base;
+		sendMessage({ command: 'rebaseList', repo: this.currentRepo, base: base });
+	}
+
+	public showInteractiveRebasePanel(candidates: ReadonlyArray<GG.RebaseCandidate>) {
+		const base = this.pendingRebaseBase;
+		if (base === null) return;
+		if (candidates.length === 0) {
+			dialog.showError('Interactive Rebase', 'There are no commits between this commit and HEAD to rebase.', null, null);
+			return;
+		}
+		this.rebasePanel.open(candidates, {
+			onApply: (plan) => {
+				sendMessage({ command: 'rebaseStart', repo: this.currentRepo, base: base, plan: plan });
+			},
+			onCancel: () => {
+				this.pendingRebaseBase = null;
+			}
+		});
+	}
+
+	public closeInteractiveRebasePanel() {
+		this.rebasePanel.close();
+		this.pendingRebaseBase = null;
+	}
+
+	public applyRebaseLiveStatus(status: GG.RebaseLiveStatus) {
+		const prevState = this.lastAppliedRebaseState;
+		this.lastAppliedRebaseState = status.state;
+		this.rebaseStatusBar.update(
+			status,
+			(action) => {
+				sendMessage({ command: 'rebaseControl', repo: this.currentRepo, action: action });
+			}
+		);
+		if (status.state === GG.RebaseLiveStateKind.EditStopped && prevState !== GG.RebaseLiveStateKind.EditStopped) {
+			this.openStoppedCommit(status);
+		}
+	}
+
+	/** Show the in-rebase commit-message dialog. The backend is awaiting a
+	 * `rebasePromptResponse` for this `promptId` and its git child process
+	 * is blocked until we send one — Cancel falls back to the original
+	 * message so git can proceed unchanged.
+	 */
+	public showRebasePrompt(promptId: string, defaultMessage: string) {
+		dialog.showForm(
+			'Edit the commit message for this rebase step. Click Cancel to keep the original message.',
+			[{
+				type: DialogInputType.TextArea,
+				name: 'Commit Message',
+				default: defaultMessage,
+				placeholder: 'Enter the commit message'
+			}],
+			'Confirm Message',
+			(values) => {
+				const message = <string>values[0];
+				sendMessage({ command: 'rebasePromptResponse', promptId, accepted: true, message });
+			},
+			null,
+			'Cancel',
+			() => {
+				sendMessage({ command: 'rebasePromptResponse', promptId, accepted: false, message: defaultMessage });
+			}
+		);
+	}
+
+	private openStoppedCommit(status: GG.RebaseLiveStatus) {
+		const oid = status.progress !== null ? status.progress.currentOid : null;
+		if (oid === null) return;
+		if (this.expandedCommit !== null && this.expandedCommit.commitHash === oid && this.expandedCommit.compareWithHash === null) return;
+		const commitIndex = this.getCommitId(oid);
+		if (commitIndex === null) {
+			// Commit hash is outside the currently loaded window (or rebase hasn't yet
+			// advanced the graph); skip silently rather than bothering the user.
+			return;
+		}
+		const commitElem = findCommitElemWithId(getCommitElems(), commitIndex);
+		if (commitElem === null) return;
+		this.scrollToCommit(oid, true);
+		this.loadCommitDetails(commitElem);
+	}
 
 	/* Table Utils */
 
@@ -3913,6 +4005,7 @@ window.addEventListener('load', () => {
 	/* Command Processing */
 	window.addEventListener('message', event => {
 		const msg: GG.ResponseMessage = event.data;
+
 		switch (msg.command) {
 			case 'addRemote':
 				refreshOrDisplayError(msg.error, 'Unable to Add Remote', true);
@@ -4102,6 +4195,36 @@ window.addEventListener('load', () => {
 				} else {
 					dialog.showError('Unable to Rebase current branch on ' + msg.actionOn, msg.error, null, null);
 				}
+				break;
+			case 'rebaseControl':
+				if (msg.error !== null) {
+					dialog.showError('Rebase action failed', msg.error, null, null);
+				}
+				gitGraph.applyRebaseLiveStatus(msg.status);
+				if (msg.status.state === GG.RebaseLiveStateKind.Completed || msg.status.state === GG.RebaseLiveStateKind.Aborted || (msg.status.state === GG.RebaseLiveStateKind.Idle && !msg.status.canUndo)) {
+					gitGraph.refresh(false);
+				}
+				break;
+			case 'rebaseList':
+				if (msg.error !== null) {
+					dialog.showError('Unable to load commits for interactive rebase', msg.error, null, null);
+				} else {
+					gitGraph.showInteractiveRebasePanel(msg.candidates);
+				}
+				break;
+			case 'rebasePrompt':
+				gitGraph.showRebasePrompt(msg.promptId, msg.defaultMessage);
+				break;
+
+			case 'rebaseStart':
+				if (msg.error !== null) {
+					dialog.showError('Interactive Rebase failed to start', msg.error, null, null);
+				}
+				gitGraph.closeInteractiveRebasePanel();
+				gitGraph.applyRebaseLiveStatus(msg.status);
+				break;
+			case 'rebaseStatus':
+				gitGraph.applyRebaseLiveStatus(msg.status);
 				break;
 			case 'refresh':
 				gitGraph.refresh(false);

@@ -8,6 +8,7 @@ import { ExtensionState } from './extensionState';
 import { GitGraphPanelView } from './gitGraphPanelView';
 import { onStartUp } from './life-cycle/startup';
 import { Logger } from './logger';
+import { RebaseSession } from './rebaseSession';
 import { RepoManager } from './repoManager';
 import { StatusBarItem } from './statusBarItem';
 import { GitExecutable, UNABLE_TO_FIND_GIT_MSG, findGit, getGitExecutableFromPaths, showErrorMessage, showInformationMessage } from './utils';
@@ -43,8 +44,9 @@ export async function activate(context: vscode.ExtensionContext) {
 	const dataSource = new DataSource(gitExecutable, onDidChangeConfiguration, onDidChangeGitExecutable, logger);
 	const avatarManager = new AvatarManager(dataSource, extensionState, logger);
 	const repoManager = new RepoManager(dataSource, extensionState, onDidChangeConfiguration, logger);
+	const rebaseSession = new RebaseSession(dataSource, extensionState, context.extensionPath, logger);
 	const statusBarItem = new StatusBarItem(repoManager.getNumRepos(), repoManager.onDidChangeRepos, onDidChangeConfiguration, logger);
-	const commandManager = new CommandManager(context, avatarManager, dataSource, extensionState, repoManager, gitExecutable, onDidChangeGitExecutable, logger);
+	const commandManager = new CommandManager(context, avatarManager, dataSource, extensionState, repoManager, rebaseSession, gitExecutable, onDidChangeGitExecutable, logger);
 	const diffDocProvider = new DiffDocProvider(dataSource);
 	// Always register the panel view provider (so users can switch modes without restarting)
 	const panelProvider = GitGraphPanelView.getInstance(
@@ -53,8 +55,10 @@ export async function activate(context: vscode.ExtensionContext) {
 		extensionState,
 		avatarManager,
 		repoManager,
+		rebaseSession,
 		logger
 	);
+
 	context.subscriptions.push(
 		vscode.window.registerWebviewViewProvider(GitGraphPanelView.viewType, panelProvider)
 	);
@@ -93,6 +97,13 @@ export async function activate(context: vscode.ExtensionContext) {
 		logger
 	);
 	logger.log('Started Git Graph - Ready to use!');
+
+	// On every repo discovery cycle, restore any persisted in-progress rebase status to the panel view.
+	repoManager.onDidChangeRepos((event) => {
+		rebaseSession.resumeAll(Object.keys(event.repos), (repo, status) => {
+			panelProvider.broadcastRebaseStatus(repo, status);
+		}).catch((err) => logger.logError('Rebase resume failed: ' + (err as Error).message));
+	});
 
 	extensionState.expireOldCodeReviews();
 	onStartUp(context).catch(() => { });

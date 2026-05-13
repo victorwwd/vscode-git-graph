@@ -311,7 +311,8 @@ describe('Config', () => {
 					undo: true,
 					editMessage: true,
 					copyHash: true,
-					copySubject: true
+					copySubject: true,
+					interactiveRebaseFromHere: true
 				},
 				commitDetailsViewFile: {
 					viewDiff: true,
@@ -398,7 +399,8 @@ describe('Config', () => {
 					undo: true,
 					editMessage: true,
 					copyHash: true,
-					copySubject: true
+					copySubject: true,
+					interactiveRebaseFromHere: true
 				},
 				commitDetailsViewFile: {
 					viewDiff: true,
@@ -503,7 +505,8 @@ describe('Config', () => {
 					undo: true,
 					editMessage: true,
 					copyHash: true,
-					copySubject: true
+					copySubject: true,
+					interactiveRebaseFromHere: true
 				},
 				commitDetailsViewFile: {
 					viewDiff: true,

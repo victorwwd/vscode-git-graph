@@ -8,6 +8,7 @@ import { CodeReviewData, CodeReviews, ExtensionState } from './extensionState';
 import { GitGraphView } from './gitGraphView';
 import { GitGraphPanelView } from './gitGraphPanelView';
 import { Logger } from './logger';
+import { RebaseSession } from './rebaseSession';
 import { RepoManager } from './repoManager';
 import { GitExecutable, UNABLE_TO_FIND_GIT_MSG, VsCodeVersionRequirement, abbrevCommit, abbrevText, copyToClipboard, doesVersionMeetRequirement, getExtensionVersion, getPathFromUri, getRelativeTimeDiff, getRepoName, getSortedRepositoryPaths, isPathInWorkspace, openFile, resolveToSymbolicPath, showErrorMessage, showInformationMessage } from './utils';
 import { Disposable } from './utils/disposable';
@@ -23,6 +24,7 @@ export class CommandManager extends Disposable {
 	private readonly extensionState: ExtensionState;
 	private readonly logger: Logger;
 	private readonly repoManager: RepoManager;
+	private readonly rebaseSession: RebaseSession;
 	private gitExecutable: GitExecutable | null;
 
 	/**
@@ -36,7 +38,7 @@ export class CommandManager extends Disposable {
 	 * @param onDidChangeGitExecutable The Event emitting the Git executable for Git Graph to use.
 	 * @param logger The Git Graph Logger instance.
 	 */
-	constructor(context: vscode.ExtensionContext, avatarManger: AvatarManager, dataSource: DataSource, extensionState: ExtensionState, repoManager: RepoManager, gitExecutable: GitExecutable | null, onDidChangeGitExecutable: Event<GitExecutable>, logger: Logger) {
+	constructor(context: vscode.ExtensionContext, avatarManger: AvatarManager, dataSource: DataSource, extensionState: ExtensionState, repoManager: RepoManager, rebaseSession: RebaseSession, gitExecutable: GitExecutable | null, onDidChangeGitExecutable: Event<GitExecutable>, logger: Logger) {
 		super();
 		this.context = context;
 		this.avatarManager = avatarManger;
@@ -44,6 +46,7 @@ export class CommandManager extends Disposable {
 		this.extensionState = extensionState;
 		this.logger = logger;
 		this.repoManager = repoManager;
+		this.rebaseSession = rebaseSession;
 		this.gitExecutable = gitExecutable;
 
 		// Register Extension Commands
@@ -122,7 +125,7 @@ export class CommandManager extends Disposable {
 	 */
 	private async viewInEditor(arg: any) {
 		const loadRepo = await this.getLoadRepo(arg);
-		GitGraphView.createOrShow(this.context.extensionPath, this.dataSource, this.extensionState, this.avatarManager, this.repoManager, this.logger, loadRepo !== null ? { repo: loadRepo } : null);
+		GitGraphView.createOrShow(this.context.extensionPath, this.dataSource, this.extensionState, this.avatarManager, this.repoManager, this.rebaseSession, this.logger, loadRepo !== null ? { repo: loadRepo } : null);
 	}
 
 	/**
@@ -142,6 +145,7 @@ export class CommandManager extends Disposable {
 			this.extensionState,
 			this.avatarManager,
 			this.repoManager,
+			this.rebaseSession,
 			this.logger
 		);
 
@@ -271,7 +275,7 @@ export class CommandManager extends Disposable {
 				canPickMany: false
 			}).then((item) => {
 				if (item && item.description) {
-					GitGraphView.createOrShow(this.context.extensionPath, this.dataSource, this.extensionState, this.avatarManager, this.repoManager, this.logger, {
+					GitGraphView.createOrShow(this.context.extensionPath, this.dataSource, this.extensionState, this.avatarManager, this.repoManager, this.rebaseSession, this.logger, {
 						repo: item.description,
 						runCommandOnLoad: 'fetch'
 					});
@@ -280,12 +284,12 @@ export class CommandManager extends Disposable {
 				showErrorMessage('An unexpected error occurred while running the command "Fetch from Remote(s)".');
 			});
 		} else if (repoPaths.length === 1) {
-			GitGraphView.createOrShow(this.context.extensionPath, this.dataSource, this.extensionState, this.avatarManager, this.repoManager, this.logger, {
+			GitGraphView.createOrShow(this.context.extensionPath, this.dataSource, this.extensionState, this.avatarManager, this.repoManager, this.rebaseSession, this.logger, {
 				repo: repoPaths[0],
 				runCommandOnLoad: 'fetch'
 			});
 		} else {
-			GitGraphView.createOrShow(this.context.extensionPath, this.dataSource, this.extensionState, this.avatarManager, this.repoManager, this.logger, null);
+			GitGraphView.createOrShow(this.context.extensionPath, this.dataSource, this.extensionState, this.avatarManager, this.repoManager, this.rebaseSession, this.logger, null);
 		}
 	}
 
@@ -341,7 +345,7 @@ export class CommandManager extends Disposable {
 		}).then((item) => {
 			if (item) {
 				const commitHashes = item.codeReviewId.split('-');
-				GitGraphView.createOrShow(this.context.extensionPath, this.dataSource, this.extensionState, this.avatarManager, this.repoManager, this.logger, {
+				GitGraphView.createOrShow(this.context.extensionPath, this.dataSource, this.extensionState, this.avatarManager, this.repoManager, this.rebaseSession, this.logger, {
 					repo: item.codeReviewRepo,
 					commitDetails: {
 						commitHash: commitHashes[commitHashes.length > 1 ? 1 : 0],
