@@ -1,0 +1,29 @@
+web/rebaseStatusBar.ts
+  s_7016482b6f251d::t_dad9fd3e72d5b9 120
+docs/TODO.md
+  h_d0860d6ab27b0a 1-40
+src/rebaseSession.ts
+  s_7016482b6f251d::t_6d0f5e1d1fc679 127-129,132,134
+  s_7016482b6f251d::t_e004231cc34ea3 237
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.8",
+  "base_commit_sha": "cde22b8bb3ed002ed8b40b814cb72689fd7669b1",
+  "prompts": {},
+  "humans": {
+    "h_d0860d6ab27b0a": {
+      "author": "victorwwd <victorwwd@outlook.com>"
+    }
+  },
+  "sessions": {
+    "s_7016482b6f251d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "ed97302d-6747-42ad-821e-fd6d9f27c6db",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "victorwwd <victorwwd@outlook.com>"
+    }
+  }
+}
