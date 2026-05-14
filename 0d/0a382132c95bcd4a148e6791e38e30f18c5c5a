@@ -1,0 +1,21 @@
+web/main.ts
+  s_0537243e96b8e3::t_ee8ec24ebfed85 3385-3386
+  s_0537243e96b8e3::t_f8236b20daaf9e 3971-3972,3975-3981
+  s_0537243e96b8e3::t_cea83b05683d6f 3312
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.8",
+  "base_commit_sha": "0d0a382132c95bcd4a148e6791e38e30f18c5c5a",
+  "prompts": {},
+  "sessions": {
+    "s_0537243e96b8e3": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "6dc60865-e518-4ef2-ac02-594dd3d57471",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "victorwwd <victorwwd@outlook.com>"
+    }
+  }
+}
