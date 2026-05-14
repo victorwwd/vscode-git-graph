@@ -2723,7 +2723,14 @@ class GitGraphView {
 				if (newHashIndex > -1) {
 					handledEvent(e);
 					const elem = findCommitElemWithId(getCommitElems(), newHashIndex);
-					if (elem !== null) this.loadCommitDetails(elem);
+					if (elem !== null) {
+						const newCommit = this.getCommitOfElem(elem);
+						if (newCommit !== null) {
+							this.clearCommitSelection();
+							this.toggleCommitSelection(newCommit.hash, elem);
+						}
+						this.loadCommitDetails(elem);
+					}
 				}
 			} else if (e.key && (e.ctrlKey || e.metaKey)) {
 				const key = e.key.toLowerCase(), keybindings = this.config.keybindings;
