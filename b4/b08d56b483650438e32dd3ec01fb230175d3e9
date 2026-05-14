@@ -1,0 +1,24 @@
+web/main.ts
+  s_d5e486ac4ec37c::t_ac88563e560485 3811
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.8",
+  "base_commit_sha": "b4b08d56b483650438e32dd3ec01fb230175d3e9",
+  "prompts": {},
+  "humans": {
+    "h_d0860d6ab27b0a": {
+      "author": "victorwwd <victorwwd@outlook.com>"
+    }
+  },
+  "sessions": {
+    "s_d5e486ac4ec37c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "7bab88f8-f05b-44b7-a2d1-365cb5c7dfb3",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "victorwwd <victorwwd@outlook.com>"
+    }
+  }
+}
