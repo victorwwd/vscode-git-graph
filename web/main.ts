@@ -3308,7 +3308,7 @@ class GitGraphView {
 		}
 		html += '</div><div id="cdvControls"><div id="cdvClose" class="cdvControlBtn" title="Close">' + SVG_ICONS.close + '</div>' +
 			(codeReviewPossible ? '<div id="cdvCodeReview" class="cdvControlBtn">' + SVG_ICONS.review + '</div>' : '') +
-			(!expandedCommit.loading ? '<div id="cdvFileViewTypeList" class="cdvControlBtn cdvFileViewTypeBtn" title="File List View">' + SVG_ICONS.fileList + '</div><div id="cdvFileViewTypeTree" class="cdvControlBtn cdvFileViewTypeBtn" title="File Tree View">' + SVG_ICONS.fileTree + '</div><div id="cdvCollapse" class="cdvControlBtn cdvFolderBtn" title="Collapse/Expand Folders">' + SVG_ICONS.collapseAll + '</div><div id="cdvExpand" class="cdvControlBtn cdvFolderBtn" title="Expand Folders">' + SVG_ICONS.expandAll + '</div>' : '') +
+			(!expandedCommit.loading ? '<div id="cdvFileViewTypeList" class="cdvControlBtn cdvFileViewTypeBtn" title="File List View">' + SVG_ICONS.fileList + '</div><div id="cdvFileViewTypeTree" class="cdvControlBtn cdvFileViewTypeBtn" title="File Tree View">' + SVG_ICONS.fileTree + '</div><div id="cdvFolderToggle" class="cdvControlBtn cdvFolderBtn"></div>' : '') +
 			(externalDiffPossible ? '<div id="cdvExternalDiff" class="cdvControlBtn">' + SVG_ICONS.linkExternal + '</div>' : '') +
 			'</div><div class="cdvHeightResize"></div>';
 
@@ -3358,6 +3358,7 @@ class GitGraphView {
 
 		if (!expandedCommit.loading) {
 			this.makeCdvFileViewInteractive();
+			this.renderCdvFolderToggleBtn();
 			this.renderCdvFileViewTypeBtns();
 			this.renderCdvExternalDiffBtn();
 			this.makeCdvDividerDraggable();
@@ -3387,11 +3388,17 @@ class GitGraphView {
 			document.getElementById('cdvFileViewTypeList')!.addEventListener('click', () => {
 				this.changeFileViewType(GG.FileViewType.List);
 			});
-			document.getElementById('cdvCollapse')!.addEventListener('click', () => {
-				this.openFolders(false);
-			});
-			document.getElementById('cdvExpand')!.addEventListener('click', () => {
-				this.openFolders(true);
+			document.getElementById('cdvFolderToggle')!.addEventListener('click', () => {
+				const folders = document.getElementsByClassName('fileTreeFolder');
+				let anyClosed = false;
+				for (let i = 0; i < folders.length; i++) {
+					if (folders[i].parentElement!.classList.contains('closed')) {
+						anyClosed = true;
+						break;
+					}
+				}
+				this.openFolders(anyClosed);
+				this.renderCdvFolderToggleBtn();
 			});
 			let cdvSummaryToggleBtn = document.getElementById('cdvSummaryToggleBtn');
 			if (cdvSummaryToggleBtn !== null) cdvSummaryToggleBtn.addEventListener('click', () => {
@@ -3674,6 +3681,26 @@ class GitGraphView {
 		this.saveState();
 	}
 
+	private renderCdvFolderToggleBtn() {
+		const btn = document.getElementById('cdvFolderToggle');
+		if (btn === null) return;
+		const folders = document.getElementsByClassName('fileTreeFolder');
+		let anyClosed = false;
+		for (let i = 0; i < folders.length; i++) {
+			if (folders[i].parentElement!.classList.contains('closed')) {
+				anyClosed = true;
+				break;
+			}
+		}
+		if (anyClosed) {
+			btn.innerHTML = SVG_ICONS.expandAll;
+			btn.setAttribute('title', 'Expand Folders');
+		} else {
+			btn.innerHTML = SVG_ICONS.collapseAll;
+			btn.setAttribute('title', 'Collapse Folders');
+		}
+	}
+
 	private makeCdvFileViewInteractive() {
 		const getFileElemOfEventTarget = (target: EventTarget) => <HTMLElement>(<Element>target).closest('.fileTreeFileRecord');
 		const getFileOfFileElem = (fileChanges: ReadonlyArray<GG.GitFileChange>, fileElem: HTMLElement) => fileChanges[parseInt(fileElem.dataset.index!)];
@@ -3781,6 +3808,7 @@ class GitGraphView {
 			parent.children[1].classList.toggle('hidden');
 			alterFileTreeFolderOpen(expandedCommit.fileTree, decodeURIComponent(sourceElem.dataset.folderpath!), isOpen);
 			this.saveState();
+			this.renderCdvFolderToggleBtn();
 		});
 
 		addListenerToClass('fileTreeRepo', 'click', (e) => {
@@ -3916,6 +3944,7 @@ class GitGraphView {
 		alterClass(treeBtnElem, CLASS_ACTIVE, !listView);
 		alterClass(listBtnElem, CLASS_ACTIVE, listView);
 		setFolderBtns();
+		this.renderCdvFolderToggleBtn();
 		function setFolderBtns() {
 			let btns = document.getElementsByClassName('cdvFolderBtn');
 			for (let i = 0; i < btns.length; i++) {
