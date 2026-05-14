@@ -9,7 +9,7 @@ import { RebaseSession } from './rebaseSession';
 import { RepoFileWatcher } from './repoFileWatcher';
 import { RepoManager } from './repoManager';
 import { ErrorInfo, GitConfigLocation, GitGraphViewInitialState, GitPushBranchMode, GitRepoSet, LoadGitGraphViewTo, RebaseLiveStatus, RequestDropCommits, RequestMessage, RequestSquashCommits, ResponseMessage } from './types';
-import { UNABLE_TO_FIND_GIT_MSG, UNCOMMITTED, archive, copyFilePathToClipboard, copyToClipboard, createPullRequest, getNonce, openExtensionSettings, openExternalUrl, openFile, showErrorMessage, viewDiff, viewDiffWithWorkingFile, viewFileAtRevision, viewScm } from './utils';
+import { UNABLE_TO_FIND_GIT_MSG, UNCOMMITTED, archive, copyFilePathToClipboard, copyFilePathsToClipboard, copyToClipboard, createPullRequest, getNonce, openExtensionSettings, openExternalUrl, openFile, showErrorMessage, viewDiff, viewDiffWithWorkingFile, viewFileAtRevision, viewScm } from './utils';
 import { Disposable, toDisposable } from './utils/disposable';
 
 /**
@@ -287,6 +287,12 @@ export abstract class BaseGitGraphView extends Disposable {
 				this.sendMessage({
 					command: 'copyFilePath',
 					error: await copyFilePathToClipboard(msg.repo, msg.filePath, msg.absolute)
+				});
+				break;
+			case 'copyFilePaths':
+				this.sendMessage({
+					command: 'copyFilePaths',
+					error: await copyFilePathsToClipboard(msg.repo, msg.filePaths)
 				});
 				break;
 			case 'copyToClipboard':

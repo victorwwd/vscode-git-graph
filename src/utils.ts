@@ -290,6 +290,16 @@ export function copyFilePathToClipboard(repo: string, filePath: string, absolute
 }
 
 /**
+ * Copy multiple absolute file paths in a repository to the clipboard, separated by newlines.
+ * @param repo The repository the files are contained in.
+ * @param filePaths The relative paths of the files within the repository.
+ * @returns A promise resolving to the ErrorInfo of the executed command.
+ */
+export function copyFilePathsToClipboard(repo: string, filePaths: ReadonlyArray<string>) {
+	return copyToClipboard(filePaths.map((filePath) => path.join(repo, filePath)).join('\n'));
+}
+
+/**
  * Copy a string to the clipboard.
  * @param text The string.
  * @returns A promise resolving to the ErrorInfo of the executed command.

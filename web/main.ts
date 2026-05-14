@@ -41,6 +41,7 @@ class GitGraphView {
 	private renderedGitBranchHead: string | null = null;
 	private pendingRebaseBase: string | null = null;
 	private lastAppliedRebaseState: GG.RebaseLiveStateKind | null = null;
+	private cdvCopyAllPathsResetTimer: number | null = null;
 	private readonly rebasePanel: RebasePanel = new RebasePanel();
 	private readonly rebaseStatusBar: RebaseStatusBar;
 
@@ -3308,7 +3309,7 @@ class GitGraphView {
 		}
 		html += '</div><div id="cdvControls"><div id="cdvClose" class="cdvControlBtn" title="Close">' + SVG_ICONS.close + '</div>' +
 			(codeReviewPossible ? '<div id="cdvCodeReview" class="cdvControlBtn">' + SVG_ICONS.review + '</div>' : '') +
-			(!expandedCommit.loading ? '<div id="cdvFileViewTypeList" class="cdvControlBtn cdvFileViewTypeBtn" title="File List View">' + SVG_ICONS.fileList + '</div><div id="cdvFileViewTypeTree" class="cdvControlBtn cdvFileViewTypeBtn" title="File Tree View">' + SVG_ICONS.fileTree + '</div><div id="cdvFolderToggle" class="cdvControlBtn cdvFolderBtn"></div>' : '') +
+			(!expandedCommit.loading ? '<div id="cdvFileViewTypeList" class="cdvControlBtn cdvFileViewTypeBtn" title="File List View">' + SVG_ICONS.fileList + '</div><div id="cdvFileViewTypeTree" class="cdvControlBtn cdvFileViewTypeBtn" title="File Tree View">' + SVG_ICONS.fileTree + '</div><div id="cdvFolderToggle" class="cdvControlBtn cdvFolderBtn"></div><div id="cdvCopyAllPaths" class="cdvControlBtn" title="Copy All File Paths to Clipboard">' + SVG_ICONS.copy + '</div>' : '') +
 			(externalDiffPossible ? '<div id="cdvExternalDiff" class="cdvControlBtn">' + SVG_ICONS.linkExternal + '</div>' : '') +
 			'</div><div class="cdvHeightResize"></div>';
 
@@ -3399,6 +3400,24 @@ class GitGraphView {
 				}
 				this.openFolders(anyClosed);
 				this.renderCdvFolderToggleBtn();
+			});
+			document.getElementById('cdvCopyAllPaths')!.addEventListener('click', () => {
+				const expandedCommit = this.expandedCommit;
+				if (expandedCommit === null || expandedCommit.fileChanges === null) return;
+				sendMessage({
+					command: 'copyFilePaths',
+					repo: this.currentRepo,
+					filePaths: expandedCommit.fileChanges.map((f) => f.newFilePath)
+				});
+				const btn = document.getElementById('cdvCopyAllPaths');
+				if (btn === null) return;
+				btn.innerHTML = SVG_ICONS.check;
+				if (this.cdvCopyAllPathsResetTimer !== null) clearTimeout(this.cdvCopyAllPathsResetTimer);
+				this.cdvCopyAllPathsResetTimer = window.setTimeout(() => {
+					const b = document.getElementById('cdvCopyAllPaths');
+					if (b !== null) b.innerHTML = SVG_ICONS.copy;
+					this.cdvCopyAllPathsResetTimer = null;
+				}, 1000);
 			});
 			let cdvSummaryToggleBtn = document.getElementById('cdvSummaryToggleBtn');
 			if (cdvSummaryToggleBtn !== null) cdvSummaryToggleBtn.addEventListener('click', () => {
@@ -4098,6 +4117,9 @@ window.addEventListener('load', () => {
 				break;
 			case 'copyFilePath':
 				finishOrDisplayError(msg.error, 'Unable to Copy File Path to Clipboard');
+				break;
+			case 'copyFilePaths':
+				finishOrDisplayError(msg.error, 'Unable to Copy File Paths to Clipboard');
 				break;
 			case 'copyToClipboard':
 				finishOrDisplayError(msg.error, 'Unable to Copy ' + msg.type + ' to Clipboard');

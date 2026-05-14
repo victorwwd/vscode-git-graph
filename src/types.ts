@@ -771,6 +771,14 @@ export interface ResponseCopyFilePath extends ResponseWithErrorInfo {
 	readonly command: 'copyFilePath';
 }
 
+export interface RequestCopyFilePaths extends RepoRequest {
+	readonly command: 'copyFilePaths';
+	readonly filePaths: ReadonlyArray<string>;
+}
+export interface ResponseCopyFilePaths extends ResponseWithErrorInfo {
+	readonly command: 'copyFilePaths';
+}
+
 export interface RequestCopyToClipboard extends BaseMessage {
 	readonly command: 'copyToClipboard';
 	readonly type: string;
@@ -1469,6 +1477,7 @@ export type RequestMessage =
 	| RequestCommitDetails
 	| RequestCompareCommits
 	| RequestCopyFilePath
+	| RequestCopyFilePaths
 	| RequestCopyToClipboard
 	| RequestCreateArchive
 	| RequestCreateBranch
@@ -1543,6 +1552,7 @@ export type ResponseMessage =
 	| ResponseCompareCommits
 	| ResponseCommitDetails
 	| ResponseCopyFilePath
+	| ResponseCopyFilePaths
 	| ResponseCopyToClipboard
 	| ResponseCreateArchive
 	| ResponseCreateBranch
