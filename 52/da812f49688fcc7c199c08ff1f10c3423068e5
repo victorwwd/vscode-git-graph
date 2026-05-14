@@ -1,0 +1,35 @@
+web/main.ts
+  s_775da6d8018672::t_3de974f2d2d3e6 3422-3449,3455-3456,3467
+  s_775da6d8018672::t_88d91169529a49 3421
+  s_775da6d8018672::t_6a7a38825d0f0e 3450-3454,3457-3461,3468
+src/baseGitGraphView.ts
+  s_775da6d8018672::t_82cc56141b0137 696
+src/types.ts
+  s_775da6d8018672::t_8fd8c4ae15582a 1429-1436,1441
+  s_775da6d8018672::t_44d92111345dfa 1442
+src/utils.ts
+  s_775da6d8018672::t_90420ec081fd6c 445-450,456-458
+  s_775da6d8018672::t_3f7a9de8f9d192 9
+  s_775da6d8018672::t_eabd4c20db007e 428-439,443-444
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.8",
+  "base_commit_sha": "52da812f49688fcc7c199c08ff1f10c3423068e5",
+  "prompts": {},
+  "humans": {
+    "h_d0860d6ab27b0a": {
+      "author": "victorwwd <victorwwd@outlook.com>"
+    }
+  },
+  "sessions": {
+    "s_775da6d8018672": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c3cdb98f-f1c5-45c0-9134-53d275529046",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "victorwwd <victorwwd@outlook.com>"
+    }
+  }
+}
