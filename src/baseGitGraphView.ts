@@ -9,7 +9,7 @@ import { RebaseSession } from './rebaseSession';
 import { RepoFileWatcher } from './repoFileWatcher';
 import { RepoManager } from './repoManager';
 import { ErrorInfo, GitConfigLocation, GitGraphViewInitialState, GitPushBranchMode, GitRepoSet, LoadGitGraphViewTo, RebaseLiveStatus, RequestDropCommits, RequestMessage, RequestSquashCommits, ResponseMessage } from './types';
-import { UNABLE_TO_FIND_GIT_MSG, UNCOMMITTED, archive, copyFilePathToClipboard, copyFilePathsToClipboard, copyToClipboard, createPullRequest, getNonce, openExtensionSettings, openExternalUrl, openFile, showErrorMessage, viewDiff, viewDiffWithWorkingFile, viewFileAtRevision, viewScm } from './utils';
+import { UNABLE_TO_FIND_GIT_MSG, UNCOMMITTED, archive, copyFilePathToClipboard, copyFilePathsToClipboard, copyToClipboard, createPullRequest, getNonce, openExtensionSettings, openExternalUrl, openFile, showErrorMessage, viewDiff, viewDiffWithWorkingFile, viewFileAtRevision, viewMultiFileDiff, viewScm } from './utils';
 import { Disposable, toDisposable } from './utils/disposable';
 
 /**
@@ -688,6 +688,12 @@ export abstract class BaseGitGraphView extends Disposable {
 				this.sendMessage({
 					command: 'viewDiff',
 					error: await viewDiff(msg.repo, msg.fromHash, msg.toHash, msg.oldFilePath, msg.newFilePath, msg.type)
+				});
+				break;
+			case 'viewMultiFileDiff':
+				this.sendMessage({
+					command: 'viewMultiFileDiff',
+					error: await viewMultiFileDiff(msg.repo, msg.fromHash, msg.toHash, msg.items, msg.title)
 				});
 				break;
 			case 'viewDiffWithWorkingFile':

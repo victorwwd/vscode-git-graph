@@ -6,7 +6,7 @@ import { getConfig } from './config';
 import { DataSource } from './dataSource';
 import { DiffSide, encodeDiffDocUri } from './diffDocProvider';
 import { ExtensionState } from './extensionState';
-import { ErrorInfo, GitFileStatus, GitRepoSet, PullRequestConfig, PullRequestProvider, RepoDropdownOrder } from './types';
+import { ErrorInfo, GitFileStatus, GitRepoSet, MultiFileDiffItem, PullRequestConfig, PullRequestProvider, RepoDropdownOrder } from './types';
 
 export const UNCOMMITTED = '*';
 export const UNABLE_TO_FIND_GIT_MSG = 'Unable to find a Git executable. Either: Set the Visual Studio Code Setting "git.path" to the path and filename of an existing Git executable, or install Git and restart Visual Studio Code.';
@@ -425,6 +425,59 @@ export async function openFile(repo: string, filePath: string, hash: string | nu
  * @param type The Git file status of the change.
  * @returns A promise resolving to the ErrorInfo of the executed command.
  */
+export function viewMultiFileDiff(repo: string, fromHash: string, toHash: string, items: ReadonlyArray<MultiFileDiffItem>, title: string): Thenable<ErrorInfo> {
+	const resources = items.map((item) => {
+		const leftHidden = item.type === GitFileStatus.Added || item.type === GitFileStatus.Untracked;
+		const rightHidden = item.type === GitFileStatus.Deleted;
+		const originalUri = leftHidden
+			? undefined
+			: withFilePath(encodeDiffDocUri(repo, item.oldFilePath, item.fromHash === item.toHash ? item.fromHash + '^' : item.fromHash, item.type, DiffSide.Old), repo, item.oldFilePath);
+		const modifiedUri = rightHidden
+			? undefined
+			: withFilePath(encodeDiffDocUri(repo, item.newFilePath, item.toHash, item.type, DiffSide.New), repo, item.newFilePath);
+		return { originalUri, modifiedUri };
+	}).filter((r) => r.originalUri !== undefined || r.modifiedUri !== undefined);
+
+	if (resources.length === 0) return Promise.resolve(null);
+
+	const sourceId = fromHash === UNCOMMITTED || toHash === UNCOMMITTED ? 'uncommitted' : fromHash + '..' + toHash;
+	const repoUri = vscode.Uri.file(repo);
+	const multiDiffSourceUri = repoUri.with({ scheme: 'git-graph-multi-diff', path: repoUri.path + '/' + sourceId });
+
+	// eslint-disable-next-line no-console
+	console.log('[Git Graph] viewMultiFileDiff:', {
+		repo,
+		multiDiffSourceUri: multiDiffSourceUri.toString(),
+		resourceCount: resources.length,
+		resources: resources.map((r) => ({
+			originalUri: r.originalUri?.toString(),
+			modifiedUri: r.modifiedUri?.toString()
+		}))
+	});
+
+	return vscode.commands.executeCommand('_workbench.openMultiDiffEditor', {
+		multiDiffSourceUri: multiDiffSourceUri,
+		title: title,
+		resources: resources
+	}).then(
+		() => {
+			// eslint-disable-next-line no-console
+			console.log('[Git Graph] openMultiDiffEditor resolved successfully');
+			return null;
+		},
+		(err) => {
+			// eslint-disable-next-line no-console
+			console.error('[Git Graph] openMultiDiffEditor rejected:', err);
+			return 'Visual Studio Code was unable to open the Multi-File Diff Editor.';
+		}
+	);
+}
+
+function withFilePath(uri: vscode.Uri, repo: string, filePath: string): vscode.Uri {
+	if (uri.scheme === 'file') return uri;
+	return uri.with({ path: '/' + repo.replace(/\\/g, '/').replace(/^\/+/, '') + '/' + filePath });
+}
+
 export function viewDiff(repo: string, fromHash: string, toHash: string, oldFilePath: string, newFilePath: string, type: GitFileStatus) {
 	if (type !== GitFileStatus.Untracked) {
 		let abbrevFromHash = abbrevCommit(fromHash), abbrevToHash = toHash !== UNCOMMITTED ? abbrevCommit(toHash) : 'Present', pathComponents = newFilePath.split('/');

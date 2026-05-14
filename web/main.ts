@@ -3309,7 +3309,7 @@ class GitGraphView {
 		}
 		html += '</div><div id="cdvControls"><div id="cdvClose" class="cdvControlBtn" title="Close">' + SVG_ICONS.close + '</div>' +
 			(codeReviewPossible ? '<div id="cdvCodeReview" class="cdvControlBtn">' + SVG_ICONS.review + '</div>' : '') +
-			(!expandedCommit.loading ? '<div id="cdvFileViewTypeList" class="cdvControlBtn cdvFileViewTypeBtn" title="File List View">' + SVG_ICONS.fileList + '</div><div id="cdvFileViewTypeTree" class="cdvControlBtn cdvFileViewTypeBtn" title="File Tree View">' + SVG_ICONS.fileTree + '</div><div id="cdvFolderToggle" class="cdvControlBtn cdvFolderBtn"></div><div id="cdvCopyAllPaths" class="cdvControlBtn" title="Copy All File Paths to Clipboard">' + SVG_ICONS.copy + '</div>' : '') +
+			(!expandedCommit.loading ? '<div id="cdvFileViewTypeList" class="cdvControlBtn cdvFileViewTypeBtn" title="File List View">' + SVG_ICONS.fileList + '</div><div id="cdvFileViewTypeTree" class="cdvControlBtn cdvFileViewTypeBtn" title="File Tree View">' + SVG_ICONS.fileTree + '</div><div id="cdvFolderToggle" class="cdvControlBtn cdvFolderBtn"></div><div id="cdvCopyAllPaths" class="cdvControlBtn" title="Copy All File Paths to Clipboard">' + SVG_ICONS.copy + '</div><div id="cdvMultiFileDiff" class="cdvControlBtn" title="Open All Changes in Multi-File Diff">' + SVG_ICONS.multiFileDiff + '</div>' : '') +
 			(externalDiffPossible ? '<div id="cdvExternalDiff" class="cdvControlBtn">' + SVG_ICONS.linkExternal + '</div>' : '') +
 			'</div><div class="cdvHeightResize"></div>';
 
@@ -3418,6 +3418,59 @@ class GitGraphView {
 					if (b !== null) b.innerHTML = SVG_ICONS.copy;
 					this.cdvCopyAllPathsResetTimer = null;
 				}, 1000);
+			});
+			document.getElementById('cdvMultiFileDiff')!.addEventListener('click', () => {
+				const expandedCommit = this.expandedCommit;
+				if (expandedCommit === null || expandedCommit.fileChanges === null) return;
+				const commitOrder = this.getCommitOrder(expandedCommit.commitHash, expandedCommit.compareWithHash === null ? expandedCommit.commitHash : expandedCommit.compareWithHash);
+				const commit = this.commits[this.commitLookup[expandedCommit.commitHash]];
+				const isUncommitted = expandedCommit.compareWithHash === null && expandedCommit.commitHash === UNCOMMITTED;
+
+				const items: GG.MultiFileDiffItem[] = expandedCommit.fileChanges.map((file) => {
+					let fromHash: string, toHash: string, fileStatus = file.type;
+					if (expandedCommit.compareWithHash !== null) {
+						fromHash = commitOrder.from;
+						toHash = commitOrder.to;
+					} else if (commit.stash !== null) {
+						if (fileStatus === GG.GitFileStatus.Untracked) {
+							fromHash = commit.stash.untrackedFilesHash!;
+							toHash = commit.stash.untrackedFilesHash!;
+							fileStatus = GG.GitFileStatus.Added;
+						} else {
+							fromHash = commit.stash.baseHash;
+							toHash = expandedCommit.commitHash;
+						}
+					} else if (isUncommitted) {
+						fromHash = 'HEAD';
+						toHash = UNCOMMITTED;
+					} else {
+						fromHash = expandedCommit.commitHash;
+						toHash = expandedCommit.commitHash;
+					}
+					return { fromHash, toHash, oldFilePath: file.oldFilePath, newFilePath: file.newFilePath, type: fileStatus };
+				});
+
+				const fileCount = items.length;
+				const abbrevTo = commitOrder.to !== UNCOMMITTED ? commitOrder.to.substring(0, 8) : 'Uncommitted';
+				let subject: string;
+				if (expandedCommit.compareWithHash !== null) {
+					const abbrevFrom = commitOrder.from.substring(0, 8);
+					subject = abbrevFrom + ' ↔ ' + abbrevTo;
+				} else if (isUncommitted) {
+					subject = 'Uncommitted Changes';
+				} else {
+					const messageSubject = commit.message.split('\n')[0];
+					subject = abbrevTo + ' - ' + messageSubject;
+				}
+				const title = subject + ' (' + fileCount + ' file' + (fileCount === 1 ? '' : 's') + ')';
+				sendMessage({
+					command: 'viewMultiFileDiff',
+					repo: this.currentRepo,
+					fromHash: commitOrder.from,
+					toHash: commitOrder.to,
+					items: items,
+					title: title
+				});
 			});
 			let cdvSummaryToggleBtn = document.getElementById('cdvSummaryToggleBtn');
 			if (cdvSummaryToggleBtn !== null) cdvSummaryToggleBtn.addEventListener('click', () => {
@@ -4328,6 +4381,9 @@ window.addEventListener('load', () => {
 				break;
 			case 'viewDiffWithWorkingFile':
 				finishOrDisplayError(msg.error, 'Unable to View Diff with Working File');
+				break;
+			case 'viewMultiFileDiff':
+				finishOrDisplayError(msg.error, 'Unable to Open Multi-File Diff');
 				break;
 			case 'viewFileAtRevision':
 				finishOrDisplayError(msg.error, 'Unable to View File at Revision');

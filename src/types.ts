@@ -1426,6 +1426,25 @@ export interface ResponseUpdateCodeReview extends ResponseWithErrorInfo {
 	readonly command: 'updateCodeReview';
 }
 
+export interface MultiFileDiffItem {
+	readonly fromHash: string;
+	readonly toHash: string;
+	readonly oldFilePath: string;
+	readonly newFilePath: string;
+	readonly type: GitFileStatus;
+}
+
+export interface RequestViewMultiFileDiff extends RepoRequest {
+	readonly command: 'viewMultiFileDiff';
+	readonly fromHash: string;
+	readonly toHash: string;
+	readonly items: ReadonlyArray<MultiFileDiffItem>;
+	readonly title: string;
+}
+export interface ResponseViewMultiFileDiff extends ResponseWithErrorInfo {
+	readonly command: 'viewMultiFileDiff';
+}
+
 export interface RequestViewDiff extends RepoRequest {
 	readonly command: 'viewDiff';
 	readonly fromHash: string;
@@ -1536,6 +1555,7 @@ export type RequestMessage =
 	| RequestViewDiff
 	| RequestViewDiffWithWorkingFile
 	| RequestViewFileAtRevision
+	| RequestViewMultiFileDiff
 	| RequestViewScm;
 
 export type ResponseMessage =
@@ -1609,6 +1629,7 @@ export type ResponseMessage =
 	| ResponseViewDiff
 	| ResponseViewDiffWithWorkingFile
 	| ResponseViewFileAtRevision
+	| ResponseViewMultiFileDiff
 	| ResponseViewScm;
 
 
