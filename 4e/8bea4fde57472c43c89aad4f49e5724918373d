@@ -1,0 +1,19 @@
+web/main.ts
+  s_39bf3320b59918::t_d8e1e7ce933d10 2726-2733
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.8",
+  "base_commit_sha": "4e8bea4fde57472c43c89aad4f49e5724918373d",
+  "prompts": {},
+  "sessions": {
+    "s_39bf3320b59918": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c3af9417-346c-4849-8f4c-b4034d848f29",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "victorwwd <victorwwd@outlook.com>"
+    }
+  }
+}
