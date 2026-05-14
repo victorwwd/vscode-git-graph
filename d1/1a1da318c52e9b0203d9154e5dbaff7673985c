@@ -1,0 +1,37 @@
+web/main.ts
+  s_32a20ee3ac0744::t_403b06296e31f6 4121-4123
+  s_32a20ee3ac0744::t_1b5ae1a27f059f 3404-3411,3421
+  s_32a20ee3ac0744::t_35b35fb26909d7 3312
+  s_32a20ee3ac0744::t_6da77e4a284608 44
+  s_32a20ee3ac0744::t_5de0c6d82c0dcb 3412-3420
+src/baseGitGraphView.ts
+  s_32a20ee3ac0744::t_ad8ecb91c11b8c 12
+  s_32a20ee3ac0744::t_93e8e698701c60 292-297
+src/utils.ts
+  s_32a20ee3ac0744::t_4586358d8beedc 293-301
+src/types.ts
+  s_32a20ee3ac0744::t_38581e08c7738d 774-781
+  s_32a20ee3ac0744::t_585b6b0c3906f0 1480
+  s_32a20ee3ac0744::t_bd04c8e720c596 1555
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.8",
+  "base_commit_sha": "d11a1da318c52e9b0203d9154e5dbaff7673985c",
+  "prompts": {},
+  "humans": {
+    "h_d0860d6ab27b0a": {
+      "author": "victorwwd <victorwwd@outlook.com>"
+    }
+  },
+  "sessions": {
+    "s_32a20ee3ac0744": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "683dc176-da28-420d-a102-932c2bd0734b",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "victorwwd <victorwwd@outlook.com>"
+    }
+  }
+}
