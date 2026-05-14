@@ -3309,7 +3309,7 @@ class GitGraphView {
 		}
 		html += '</div><div id="cdvControls"><div id="cdvClose" class="cdvControlBtn" title="Close">' + SVG_ICONS.close + '</div>' +
 			(codeReviewPossible ? '<div id="cdvCodeReview" class="cdvControlBtn">' + SVG_ICONS.review + '</div>' : '') +
-			(!expandedCommit.loading ? '<div id="cdvFileViewTypeList" class="cdvControlBtn cdvFileViewTypeBtn" title="File List View">' + SVG_ICONS.fileList + '</div><div id="cdvFileViewTypeTree" class="cdvControlBtn cdvFileViewTypeBtn" title="File Tree View">' + SVG_ICONS.fileTree + '</div><div id="cdvFolderToggle" class="cdvControlBtn cdvFolderBtn"></div><div id="cdvCopyAllPaths" class="cdvControlBtn" title="Copy All File Paths to Clipboard">' + SVG_ICONS.copy + '</div><div id="cdvMultiFileDiff" class="cdvControlBtn" title="Open All Changes in Multi-File Diff">' + SVG_ICONS.multiFileDiff + '</div>' : '') +
+			(!expandedCommit.loading ? '<div id="cdvFileViewTypeToggle" class="cdvControlBtn cdvFileViewTypeBtn"></div><div id="cdvFolderToggle" class="cdvControlBtn cdvFolderBtn"></div><div id="cdvCopyAllPaths" class="cdvControlBtn" title="Copy All File Paths to Clipboard">' + SVG_ICONS.copy + '</div><div id="cdvMultiFileDiff" class="cdvControlBtn" title="Open All Changes in Multi-File Diff">' + SVG_ICONS.multiFileDiff + '</div>' : '') +
 			(externalDiffPossible ? '<div id="cdvExternalDiff" class="cdvControlBtn">' + SVG_ICONS.linkExternal + '</div>' : '') +
 			'</div><div class="cdvHeightResize"></div>';
 
@@ -3382,12 +3382,8 @@ class GitGraphView {
 				}
 			}, () => this.saveState());
 
-			document.getElementById('cdvFileViewTypeTree')!.addEventListener('click', () => {
-				this.changeFileViewType(GG.FileViewType.Tree);
-			});
-
-			document.getElementById('cdvFileViewTypeList')!.addEventListener('click', () => {
-				this.changeFileViewType(GG.FileViewType.List);
+			document.getElementById('cdvFileViewTypeToggle')!.addEventListener('click', () => {
+				this.changeFileViewType(this.getFileViewType() === GG.FileViewType.List ? GG.FileViewType.Tree : GG.FileViewType.List);
 			});
 			document.getElementById('cdvFolderToggle')!.addEventListener('click', () => {
 				const folders = document.getElementsByClassName('fileTreeFolder');
@@ -4009,12 +4005,17 @@ class GitGraphView {
 
 	private renderCdvFileViewTypeBtns() {
 		if (this.expandedCommit === null) return;
-		let treeBtnElem = document.getElementById('cdvFileViewTypeTree'), listBtnElem = document.getElementById('cdvFileViewTypeList');
-		if (treeBtnElem === null || listBtnElem === null) return;
+		let toggleBtnElem = document.getElementById('cdvFileViewTypeToggle');
+		if (toggleBtnElem === null) return;
 
 		let listView = this.getFileViewType() === GG.FileViewType.List;
-		alterClass(treeBtnElem, CLASS_ACTIVE, !listView);
-		alterClass(listBtnElem, CLASS_ACTIVE, listView);
+		if (listView) {
+			toggleBtnElem.innerHTML = SVG_ICONS.fileTree;
+			toggleBtnElem.title = 'Switch to File Tree View';
+		} else {
+			toggleBtnElem.innerHTML = SVG_ICONS.fileList;
+			toggleBtnElem.title = 'Switch to File List View';
+		}
 		setFolderBtns();
 		this.renderCdvFolderToggleBtn();
 		function setFolderBtns() {
