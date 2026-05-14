@@ -1,0 +1,57 @@
+src/baseGitGraphView.ts
+  s_0329cda59de7c3::t_9f3df8a2db0c3e 12
+  s_0329cda59de7c3::t_0e9d3dbc10b642 693-695,697-698
+  s_775da6d8018672::t_82cc56141b0137 696
+web/main.ts
+  s_0329cda59de7c3::t_2dc9709db7f30b 3422-3424
+  s_775da6d8018672::t_88d91169529a49 3425
+  s_775da6d8018672::t_3de974f2d2d3e6 3426-3453,3459-3460,3471
+  s_775da6d8018672::t_6a7a38825d0f0e 3454-3458,3461-3465,3472
+  s_0537243e96b8e3::t_f8236b20daaf9e 3975-3976,3979-3985
+  s_0329cda59de7c3::t_e44789fc5b28d5 4348-4350
+web/utils.ts
+  s_0329cda59de7c3::t_fbd486c20ee7ee 49-50
+src/utils.ts
+  s_775da6d8018672::t_3f7a9de8f9d192 9
+  s_775da6d8018672::t_eabd4c20db007e 428-439,443-444
+  s_0329cda59de7c3::t_a91bd0097d90d7 440-442
+  s_775da6d8018672::t_90420ec081fd6c 445-450,456-458
+src/types.ts
+  s_775da6d8018672::t_8fd8c4ae15582a 1429-1436,1441
+  s_0329cda59de7c3::t_54eac6ffc471e5 1437-1438
+  s_775da6d8018672::t_44d92111345dfa 1442
+  s_0329cda59de7c3::t_0473c40f19ed93 1549
+  s_0329cda59de7c3::t_edd7e3145db758 1623
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.8",
+  "base_commit_sha": "20d0012a1ddfece6f63b7949e95e60dfa2b05f04",
+  "prompts": {},
+  "sessions": {
+    "s_0329cda59de7c3": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "7e988b58-71c7-47dd-bd2a-ba386f9ff0c6",
+        "model": "claude-sonnet-4.6"
+      },
+      "human_author": "victorwwd <victorwwd@outlook.com>"
+    },
+    "s_0537243e96b8e3": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "6dc60865-e518-4ef2-ac02-594dd3d57471",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "victorwwd <victorwwd@outlook.com>"
+    },
+    "s_775da6d8018672": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c3cdb98f-f1c5-45c0-9134-53d275529046",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "victorwwd <victorwwd@outlook.com>"
+    }
+  }
+}

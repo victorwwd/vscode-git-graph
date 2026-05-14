@@ -1,0 +1,42 @@
+web/main.ts
+  s_0329cda59de7c3::t_2dc9709db7f30b 3418-3420
+  s_775da6d8018672::t_88d91169529a49 3421
+  s_775da6d8018672::t_3de974f2d2d3e6 3422-3449,3455-3456,3467
+  s_775da6d8018672::t_6a7a38825d0f0e 3450-3454,3457-3461,3468
+  s_0537243e96b8e3::t_f8236b20daaf9e 3971-3972,3975-3981
+  s_0329cda59de7c3::t_e44789fc5b28d5 4349-4351
+  s_0537243e96b8e3::t_cea83b05683d6f 3312
+  s_0537243e96b8e3::t_ee8ec24ebfed85 3385-3386
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.8",
+  "base_commit_sha": "07e1cdf6fb1afe4a25df63dfcd9639638b8d530f",
+  "prompts": {},
+  "sessions": {
+    "s_0329cda59de7c3": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "7e988b58-71c7-47dd-bd2a-ba386f9ff0c6",
+        "model": "claude-sonnet-4.6"
+      },
+      "human_author": "victorwwd <victorwwd@outlook.com>"
+    },
+    "s_0537243e96b8e3": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "6dc60865-e518-4ef2-ac02-594dd3d57471",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "victorwwd <victorwwd@outlook.com>"
+    },
+    "s_775da6d8018672": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c3cdb98f-f1c5-45c0-9134-53d275529046",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "victorwwd <victorwwd@outlook.com>"
+    }
+  }
+}
