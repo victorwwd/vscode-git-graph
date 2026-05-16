@@ -1,0 +1,19 @@
+.claude/settings.local.json
+  s_7c5887b8003bac::t_b4eabb233c3876 1-19
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.8",
+  "base_commit_sha": "03a20c5a93f87afddf43ac9959a14f319b7f76bc",
+  "prompts": {},
+  "sessions": {
+    "s_7c5887b8003bac": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a70820f3-18f9-4786-a4d0-9bdd9dc1b1c9",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "victorwwd <victorwwd@outlook.com>"
+    }
+  }
+}
