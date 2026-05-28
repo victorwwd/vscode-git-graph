@@ -275,7 +275,7 @@ function formatShortDate(unixTimestamp: number) {
 	let dateStr = format.iso
 		? date.getFullYear() + '-' + pad2(date.getMonth() + 1) + '-' + pad2(date.getDate())
 		: date.getDate() + ' ' + MONTHS[date.getMonth()] + ' ' + date.getFullYear();
-	let hourMinsStr = pad2(date.getHours()) + ':' + pad2(date.getMinutes());
+	let hourMinsStr = pad2(date.getHours()) + ':' + pad2(date.getMinutes()) + ':' + pad2(date.getSeconds());
 	let formatted;
 
 	if (format.type === GG.DateFormatType.DateAndTime) {
