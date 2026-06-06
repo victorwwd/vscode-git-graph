@@ -1,0 +1,29 @@
+src/dataSource.ts
+  s_3a1919aaa9e8b7::t_13c31830d44cb1 1453-1458,1461-1468
+  s_3a1919aaa9e8b7::t_884256a2bbdad8 1483-1502,1504-1510,1512-1518,1520-1528
+  s_3a1919aaa9e8b7::t_ebca8984ca4e0a 1481
+  s_3a1919aaa9e8b7::t_d55edb95bf0c64 1469-1470,1472-1476,1479-1480
+  s_3a1919aaa9e8b7::t_3080f9ed7f48aa 1451
+  s_3a1919aaa9e8b7::t_2c4cf8e60e3450 1471,1482,1503,1511,1519
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.3",
+  "base_commit_sha": "8bda8a87a229a124ae338d436a67bf364c4ac23f",
+  "prompts": {},
+  "humans": {
+    "h_d0860d6ab27b0a": {
+      "author": "victorwwd <victorwwd@outlook.com>"
+    }
+  },
+  "sessions": {
+    "s_3a1919aaa9e8b7": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2f7c33e8-f2a3-49bf-9c5a-a994b1c37780",
+        "model": "deepseek-v4-pro"
+      },
+      "human_author": "victorwwd <victorwwd@outlook.com>"
+    }
+  }
+}
