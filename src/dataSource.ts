@@ -1448,23 +1448,84 @@ export class DataSource extends Disposable {
 		}
 
 		const oldestCommit = commits[commits.length - 1];
+		const newestCommit = commits[0];
 
-		// Reset to the parent of the oldest commit, keeping changes staged
-		const resetResult = await this.runGitCommand(['reset', '--soft', oldestCommit + '^'], repo);
-		if (resetResult !== null) {
-			return resetResult;
+		// Check if the newest selected commit is HEAD
+		let headCommit: string;
+		try {
+			headCommit = await this.spawnGit(['rev-parse', 'HEAD'], repo, (stdout) => stdout.trim());
+		} catch (e) {
+			return e as ErrorInfo;
 		}
 
-		// Create a new commit with the combined changes
-		const commitArgs = ['commit', '-m', commitMessage];
-		if (getConfig().signCommits) {
-			commitArgs.push('-S');
-		}
-		if (noVerify) {
-			commitArgs.push('--no-verify');
+		if (headCommit === newestCommit) {
+			// Selected commits include HEAD — use simple soft reset
+			const resetResult = await this.runGitCommand(['reset', '--soft', oldestCommit + '^'], repo);
+			if (resetResult !== null) {
+				return resetResult;
+			}
+
+			const commitArgs = ['commit', '-m', commitMessage];
+			if (getConfig().signCommits) {
+				commitArgs.push('-S');
+			}
+			if (noVerify) {
+				commitArgs.push('--no-verify');
+			}
+
+			return this.runGitCommand(commitArgs, repo);
 		}
 
-		return this.runGitCommand(commitArgs, repo);
+		// Selected commits do not include HEAD — use interactive rebase
+		return this.rebaseSquashCommits(repo, commits, oldestCommit, commitMessage, noVerify);
+	}
+
+	/**
+	 * Squash commits that are not at HEAD using interactive rebase.
+	 * @param repo The path of the repository.
+	 * @param commits Array of commit hashes to squash (from newest to oldest).
+	 * @param oldestCommit The oldest commit in the squash selection.
+	 * @param commitMessage The commit message for the squashed commit.
+	 * @param noVerify If enabled, skip the pre-rebase hook.
+	 * @returns The ErrorInfo from the executed command.
+	 */
+	private rebaseSquashCommits(repo: string, commits: ReadonlyArray<string>, oldestCommit: string, commitMessage: string, noVerify: boolean): Promise<ErrorInfo> {
+		return new Promise<ErrorInfo>((resolve) => {
+			if (this.gitExecutable === null) {
+				return resolve(UNABLE_TO_FIND_GIT_MSG);
+			}
+
+			// Build sed command to change pick→squash for all selected commits except the oldest.
+			// Each non-oldest commit gets squashed into the previous (older) one.
+			const sedCommands = commits.slice(0, -1).map(hash =>
+				`s/^pick ${hash.substring(0, 7)}/squash ${hash.substring(0, 7)}/`
+			).join('; ');
+
+			const args = ['rebase', '-i', oldestCommit + '^'];
+			if (getConfig().signCommits) {
+				args.push('-S');
+			}
+			if (noVerify) {
+				args.push('--no-verify');
+			}
+
+			// Escape the message for shell execution (same approach as rebaseEditCommitMessage)
+			const escapedMessage = commitMessage
+				.replace(/\\/g, '\\\\')
+				.replace(/'/g, '\'"\'"\'');
+			const env = Object.assign({}, process.env, this.askpassEnv, {
+				GIT_SEQUENCE_EDITOR: `sed -i.bak "${sedCommands}" "$1"`,
+				GIT_EDITOR: `sh -c 'echo '"'"'${escapedMessage}'"'"' > "$@"' -- `
+			});
+
+			resolveSpawnOutput(cp.spawn(this.gitExecutable.path, args, { cwd: repo, env }))
+				.then(([status, stdout, stderr]) => {
+					resolve(status.code !== 0 ? getErrorMessage(status.error, stdout, stderr) : null);
+				})
+				.catch((errorMessage) => {
+					resolve(errorMessage);
+				});
+		});
 	}
 
 	/**
