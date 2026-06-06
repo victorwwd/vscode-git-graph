@@ -1,0 +1,19 @@
+web/main.ts
+  s_47238d0ad9e413::t_06cb92986f73da 4337-4339
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.3",
+  "base_commit_sha": "c68320ae45cc3bba88ce96ecb26b9ac9dcae902a",
+  "prompts": {},
+  "sessions": {
+    "s_47238d0ad9e413": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a5656fcb-b422-444b-9e4b-61e707362024",
+        "model": "deepseek-v4-pro"
+      },
+      "human_author": "victorwwd <victorwwd@outlook.com>"
+    }
+  }
+}

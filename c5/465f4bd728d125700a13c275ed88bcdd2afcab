@@ -1,0 +1,28 @@
+tests/commands.test.ts
+  s_3a1919aaa9e8b7::t_f512e108d0c793 47
+tests/gitGraphView.test.ts
+  s_3a1919aaa9e8b7::t_f3554e220fb33b 56
+  s_3a1919aaa9e8b7::t_913b4724d57013 266,282
+tests/rebaseSession.test.ts
+  s_3a1919aaa9e8b7::t_e54d881e1812a4 17
+  s_3a1919aaa9e8b7::t_6ae3fcc61af671 38,48
+tests/rebaseEditor.test.ts
+  s_3a1919aaa9e8b7::t_834acec41866ab 68-69,73
+  s_3a1919aaa9e8b7::t_90a89f12bc96c0 70-71
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.3",
+  "base_commit_sha": "c5465f4bd728d125700a13c275ed88bcdd2afcab",
+  "prompts": {},
+  "sessions": {
+    "s_3a1919aaa9e8b7": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2f7c33e8-f2a3-49bf-9c5a-a994b1c37780",
+        "model": "deepseek-v4-pro"
+      },
+      "human_author": "victorwwd <victorwwd@outlook.com>"
+    }
+  }
+}
