@@ -4334,6 +4334,9 @@ window.addEventListener('load', () => {
 				}
 				gitGraph.closeInteractiveRebasePanel();
 				gitGraph.applyRebaseLiveStatus(msg.status);
+				if (msg.status.state === GG.RebaseLiveStateKind.Completed || msg.status.state === GG.RebaseLiveStateKind.Aborted || (msg.status.state === GG.RebaseLiveStateKind.Idle && !msg.status.canUndo)) {
+					gitGraph.refresh(false);
+				}
 				break;
 			case 'rebaseStatus':
 				gitGraph.applyRebaseLiveStatus(msg.status);
