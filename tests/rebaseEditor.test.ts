@@ -65,6 +65,11 @@ describe('rebaseEditor.runTodo', () => {
 
 describe('rebaseEditor.runMsg', () => {
 	it('returns 1 when the commit message file cannot be read', () => {
+		const realNow = Date.now();
+		jest.spyOn(Date, 'now')
+			.mockReturnValueOnce(realNow)
+			.mockReturnValue(realNow + 600_001);
 		expect(runMsg('/nonexistent', '/nonexistent/msg')).toBe(1);
+		jest.restoreAllMocks();
 	});
 });

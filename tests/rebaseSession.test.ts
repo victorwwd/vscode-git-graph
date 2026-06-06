@@ -14,6 +14,7 @@ interface DataSourceMock {
 	rebaseAmendContinue: jest.Mock;
 	undoLastRebase: jest.Mock;
 	getRebaseStatus: jest.Mock;
+	getWorkingTreeDirt: jest.Mock;
 	isWorkingTreeClean: jest.Mock;
 	isDetachedHead: jest.Mock;
 	resolveRef: jest.Mock;
@@ -34,6 +35,7 @@ function makeMocks(): { session: RebaseSession; dataSource: DataSourceMock; stat
 		rebaseAmendContinue: jest.fn().mockResolvedValue(null),
 		undoLastRebase: jest.fn().mockResolvedValue(null),
 		getRebaseStatus: jest.fn().mockResolvedValue({ state: 'idle', progress: null, conflicts: [] }),
+		getWorkingTreeDirt: jest.fn().mockResolvedValue({ worktreeDirty: false, indexDirty: false }),
 		isWorkingTreeClean: jest.fn().mockResolvedValue(true),
 		isDetachedHead: jest.fn().mockResolvedValue(false),
 		resolveRef: jest.fn().mockResolvedValue('origHead123')
@@ -43,7 +45,7 @@ function makeMocks(): { session: RebaseSession; dataSource: DataSourceMock; stat
 		setRebaseSession: jest.fn().mockResolvedValue(null),
 		clearRebaseSession: jest.fn().mockResolvedValue(null)
 	};
-	const session = new RebaseSession(dataSource as any, state as any, '/ext/path');
+	const session = new RebaseSession(dataSource as any, state as any, '/ext/path', { log: jest.fn(), logError: jest.fn(), logCmd: jest.fn() } as any);
 	return { session, dataSource, state };
 }
 

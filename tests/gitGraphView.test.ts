@@ -53,7 +53,7 @@ describe('GitGraphView', () => {
 		extensionState = new ExtensionState(vscode.mocks.extensionContext, onDidChangeGitExecutable.subscribe);
 		avatarManager = new AvatarManager(dataSource, extensionState, logger);
 		repoManager = new RepoManager(dataSource, extensionState, onDidChangeConfiguration.subscribe, logger);
-		rebaseSession = new RebaseSession(dataSource, extensionState, '/path/to/extension');
+		rebaseSession = new RebaseSession(dataSource, extensionState, '/path/to/extension', logger);
 
 		spyOnLog = jest.spyOn(logger, 'log');
 		spyOnLogError = jest.spyOn(logger, 'logError');
@@ -263,6 +263,7 @@ describe('GitGraphView', () => {
 		describe('WebviewPanel.onDidChangeViewState', () => {
 			it('Should transition from visible to not-visible correctly', () => {
 				// Setup
+				vscode.mockExtensionSettingReturnValue('retainContextWhenHidden', false);
 				GitGraphView.createOrShow('/path/to/extension', dataSource, extensionState, avatarManager, repoManager, rebaseSession, logger, null);
 				const mockedWebviewPanel = vscode.getMockedWebviewPanel(0);
 				const spyOnRepoFileWatcherStop = jest.spyOn(GitGraphView.currentPanel!['repoFileWatcher'], 'stop');
@@ -278,6 +279,7 @@ describe('GitGraphView', () => {
 
 			it('Should transition from not-visible to visible correctly', () => {
 				// Setup
+				vscode.mockExtensionSettingReturnValue('retainContextWhenHidden', false);
 				GitGraphView.createOrShow('/path/to/extension', dataSource, extensionState, avatarManager, repoManager, rebaseSession, logger, null);
 				const mockedWebviewPanel = vscode.getMockedWebviewPanel(0);
 				mockedWebviewPanel.mocks.panel.setVisibility(false);
