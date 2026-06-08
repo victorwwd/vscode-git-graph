@@ -1,0 +1,28 @@
+src/baseGitGraphView.ts
+  s_d79cec2ad83c48::t_1201b7a5fdfcc4 147-152
+package.json
+  h_d0860d6ab27b0a 4
+tests/gitGraphView.test.ts
+  s_d79cec2ad83c48::t_300185e05bc0cd 309-324
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "d27ea6456add043b348a8957e1d9aa787daede94",
+  "prompts": {},
+  "humans": {
+    "h_d0860d6ab27b0a": {
+      "author": "victorwwd <victorwwd@outlook.com>"
+    }
+  },
+  "sessions": {
+    "s_d79cec2ad83c48": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "13271fe2-0127-41d1-9e37-2aa1ef9ad79d",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "victorwwd <victorwwd@outlook.com>"
+    }
+  }
+}
