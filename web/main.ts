@@ -1602,11 +1602,7 @@ class GitGraphView {
 			visible: visibility.copySubject,
 			onClick: () => {
 				const selectedHashes = this.getSelectedCommitsArray();
-				const messages = selectedHashes.map(hash => {
-					const commit = this.commits[this.commitLookup[hash]];
-					return commit.message;
-				}).join('\n');
-				sendMessage({ command: 'copyToClipboard', type: 'Commit Messages', data: messages });
+				sendMessage({ command: 'copyCommitMessage', repo: this.currentRepo, commitHashes: selectedHashes });
 			}
 		});
 
@@ -1762,10 +1758,10 @@ class GitGraphView {
 				}
 			},
 			{
-				title: 'Copy Commit Subject to Clipboard',
+				title: 'Copy Commit Message to Clipboard',
 				visible: visibility.copySubject,
 				onClick: () => {
-					sendMessage({ command: 'copyToClipboard', type: 'Commit Subject', data: commit.message });
+					sendMessage({ command: 'copyCommitMessage', repo: this.currentRepo, commitHashes: [hash] });
 				}
 			}
 		]];
@@ -4175,6 +4171,9 @@ window.addEventListener('load', () => {
 					gitGraph.closeCommitComparison(true);
 					dialog.showError('Unable to load Commit Comparison', msg.error, null, null);
 				}
+				break;
+			case 'copyCommitMessage':
+				finishOrDisplayError(msg.error, 'Unable to Copy Commit Message to Clipboard');
 				break;
 			case 'copyFilePath':
 				finishOrDisplayError(msg.error, 'Unable to Copy File Path to Clipboard');

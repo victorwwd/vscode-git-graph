@@ -300,6 +300,18 @@ export abstract class BaseGitGraphView extends Disposable {
 					error: await copyFilePathsToClipboard(msg.repo, msg.filePaths)
 				});
 				break;
+			case 'copyCommitMessage': {
+				const messages: string[] = [];
+				for (const commitHash of msg.commitHashes) {
+					const message = await this.dataSource.getCommitMessage(msg.repo, commitHash);
+					messages.push(message);
+				}
+				this.sendMessage({
+					command: 'copyCommitMessage',
+					error: await copyToClipboard(messages.join('\n'))
+				});
+				break;
+			}
 			case 'copyToClipboard':
 				this.sendMessage({
 					command: 'copyToClipboard',

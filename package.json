@@ -268,7 +268,7 @@
 								},
 								"copySubject": {
 									"type": "boolean",
-									"title": "Copy Commit Subject to Clipboard"
+									"title": "Copy Commit Message to Clipboard"
 								},
 								"interactiveRebaseFromHere": {
 									"type": "boolean",
