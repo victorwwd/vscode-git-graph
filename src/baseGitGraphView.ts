@@ -144,7 +144,12 @@ export abstract class BaseGitGraphView extends Disposable {
 		if (visible === this.isPanelVisible) return;
 		this.isPanelVisible = visible;
 
-		if (this.isContextRetained()) return;
+		if (this.isContextRetained()) {
+			if (visible) {
+				this.sendMessage({ command: 'refresh' });
+			}
+			return;
+		}
 
 		if (visible) {
 			this.update();

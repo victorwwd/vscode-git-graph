@@ -306,6 +306,22 @@ describe('GitGraphView', () => {
 				expect(mockedWebviewPanel.panel.webview.html).toBe('');
 				expect(GitGraphView.currentPanel!['isPanelVisible']).toBe(true);
 			});
+
+			it('Should send refresh when becoming visible with retainContextWhenHidden enabled', () => {
+				// Setup
+				vscode.mockExtensionSettingReturnValue('retainContextWhenHidden', true);
+				GitGraphView.createOrShow('/path/to/extension', dataSource, extensionState, avatarManager, repoManager, rebaseSession, logger, null);
+				const mockedWebviewPanel = vscode.getMockedWebviewPanel(0);
+				mockedWebviewPanel.mocks.panel.setVisibility(false);
+				mockedWebviewPanel.mocks.messages = [];
+
+				// Run
+				mockedWebviewPanel.mocks.panel.setVisibility(true);
+
+				// Assert
+				expect(mockedWebviewPanel.mocks.messages).toStrictEqual([{ command: 'refresh' }]);
+				expect(GitGraphView.currentPanel!['isPanelVisible']).toBe(true);
+			});
 		});
 
 		describe('RepoManager.onDidChangeRepos', () => {
