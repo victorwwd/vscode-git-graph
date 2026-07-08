@@ -51,6 +51,7 @@ class GitGraphView {
 	} = { time: 0, hash: null };
 
 	public pendingEditCommitMessage: { hash: string, target: DialogTarget } | null = null;
+	public pendingSquashCommits: { commits: string[], target: DialogTarget } | null = null;
 
 	private readonly findWidget: FindWidget;
 	private readonly settingsWidget: SettingsWidget;
@@ -1027,21 +1028,26 @@ class GitGraphView {
 		const selectedCommits = this.getSelectedCommitsArray();
 		if (selectedCommits.length < 2) return;
 
-		const newestCommit = selectedCommits[0];
-		const newestCommitData = this.commits[this.commitLookup[newestCommit]];
+		// Request the full commit messages (subject + body) of all selected commits
+		// from the backend to prefill the squash message dialog. The dialog is shown
+		// once the response arrives (see case 'commitMessages').
+		this.pendingSquashCommits = { commits: selectedCommits, target: target };
+		sendMessage({ command: 'commitMessages', repo: this.currentRepo, commits: selectedCommits });
+	}
 
-		const commitsList = selectedCommits.map(hash => {
+	public showSquashCommitsDialog(commits: string[], defaultMessage: string, target: DialogTarget) {
+		const commitsList = commits.map(hash => {
 			const commitData = this.commits[this.commitLookup[hash]];
 			return `<b>${abbrevCommit(hash)}</b> - ${escapeHtml(commitData.message)}`;
 		}).join('<br>');
 
 		dialog.showForm(
-			`Are you sure you want to squash ${selectedCommits.length} commits into one?<br><br>` +
+			`Are you sure you want to squash ${commits.length} commits into one?<br><br>` +
 			`${commitsList}`,
 			[{
-				type: DialogInputType.Text,
+				type: DialogInputType.TextArea,
 				name: 'Commit Message',
-				default: newestCommitData.message,
+				default: defaultMessage,
 				placeholder: 'Enter the commit message for the squashed commit'
 			}, { type: DialogInputType.Checkbox, name: 'No Verify', value: false }],
 			'Yes, squash commits',
@@ -1051,7 +1057,7 @@ class GitGraphView {
 				runAction({
 					command: 'squashCommits',
 					repo: this.currentRepo,
-					commits: selectedCommits,
+					commits: commits,
 					commitMessage: commitMessage,
 					noVerify: noVerify
 				}, 'Squashing Commits');
@@ -4220,6 +4226,16 @@ window.addEventListener('load', () => {
 					}
 				} else {
 					dialog.showError('Unable to get commit message', null, null, null);
+				}
+				break;
+			case 'commitMessages':
+				if (msg.message !== null && gitGraph.pendingSquashCommits !== null) {
+					// Show the squash dialog with the combined full commit messages
+					const pending = gitGraph.pendingSquashCommits;
+					gitGraph.pendingSquashCommits = null;
+					gitGraph.showSquashCommitsDialog(pending.commits, msg.message, pending.target);
+				} else if (msg.message === null) {
+					dialog.showError('Unable to get commit messages', null, null, null);
 				}
 				break;
 			case 'compareCommits':

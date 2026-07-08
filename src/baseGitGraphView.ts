@@ -8,7 +8,7 @@ import { Logger } from './logger';
 import { RebaseSession } from './rebaseSession';
 import { RepoFileWatcher } from './repoFileWatcher';
 import { RepoManager } from './repoManager';
-import { ErrorInfo, GitConfigLocation, GitGraphViewInitialState, GitPushBranchMode, GitRepoSet, LoadGitGraphViewTo, RebaseLiveStatus, RequestDropCommits, RequestMessage, RequestSquashCommits, ResponseMessage } from './types';
+import { ErrorInfo, GitConfigLocation, GitGraphViewInitialState, GitPushBranchMode, GitRepoSet, LoadGitGraphViewTo, RebaseLiveStatus, RequestCommitMessages, RequestDropCommits, RequestMessage, RequestSquashCommits, ResponseMessage } from './types';
 import { UNABLE_TO_FIND_GIT_MSG, UNCOMMITTED, archive, copyFilePathToClipboard, copyFilePathsToClipboard, copyToClipboard, createPullRequest, getNonce, openExtensionSettings, openExternalUrl, openFile, showErrorMessage, viewDiff, viewDiffWithWorkingFile, viewFileAtRevision, viewMultiFileDiff, viewScm } from './utils';
 import { Disposable, toDisposable } from './utils/disposable';
 
@@ -278,6 +278,24 @@ export abstract class BaseGitGraphView extends Disposable {
 					error: commitBody === null ? 'Unable to get commit message' : null
 				});
 				break;
+			case 'commitMessages': {
+				// Combine the full commit messages of all selected commits (newest first),
+				// joined by a separator. Used to prefill the squash commit message dialog.
+				const commitHashes = (msg as RequestCommitMessages).commits;
+				let combinedMessage = '';
+				for (const hash of commitHashes) {
+					try {
+						const body = await this.dataSource.getCommitMessage(msg.repo, hash);
+						combinedMessage += (combinedMessage ? '\n\n----\n' : '') + body;
+					} catch (_) { /* skip individual commit failure */ }
+				}
+				this.sendMessage({
+					command: 'commitMessages',
+					message: combinedMessage,
+					error: combinedMessage === '' ? 'Unable to get commit messages' : null
+				});
+				break;
+			}
 			case 'compareCommits':
 				this.sendMessage({
 					command: 'compareCommits',

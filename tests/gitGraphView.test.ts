@@ -977,6 +977,35 @@ describe('GitGraphView', () => {
 			});
 		});
 
+		describe('commitMessages', () => {
+			it('Should combine the full commit messages of all selected commits', async () => {
+				// Setup
+				const spyOnGetCommitMessage = jest.spyOn(dataSource, 'getCommitMessage');
+				spyOnGetCommitMessage.mockResolvedValueOnce('newest subject\n\nnewest body');
+				spyOnGetCommitMessage.mockResolvedValueOnce('oldest subject\n\noldest body');
+
+				// Run
+				onDidReceiveMessage({
+					command: 'commitMessages',
+					repo: '/path/to/repo',
+					commits: ['newesthash', 'oldesthash']
+				});
+
+				// Assert
+				await waitForExpect(() => {
+					expect(spyOnGetCommitMessage).toHaveBeenCalledWith('/path/to/repo', 'newesthash');
+					expect(spyOnGetCommitMessage).toHaveBeenCalledWith('/path/to/repo', 'oldesthash');
+					expect(messages).toStrictEqual([
+						{
+							command: 'commitMessages',
+							message: 'newest subject\n\nnewest body\n\n----\noldest subject\n\noldest body',
+							error: null
+						}
+					]);
+				});
+			});
+		});
+
 		describe('commitDetails', () => {
 			it('Should get the data for the Commit Details View', async () => {
 				// Setup
