@@ -29,10 +29,10 @@ class SettingsWidget {
 
 		this.widgetElem = document.createElement('div');
 		this.widgetElem.id = 'settingsWidget';
-		this.widgetElem.innerHTML = '<h2>Repository Settings</h2><div id="settingsContent"></div><div id="settingsLoading"></div><div id="settingsClose"></div>';
+		this.widgetElem.innerHTML = '<div id="settingsHeader"><h2>Repository Settings</h2><div id="settingsClose"></div></div><div id="settingsScrollWrap"><div id="settingsContent"></div><div id="settingsLoading"></div></div>';
 		document.body.appendChild(this.widgetElem);
 
-		observeElemScroll('settingsWidget', this.scrollTop, (scrollTop) => {
+		observeElemScroll('settingsScrollWrap', this.scrollTop, (scrollTop) => {
 			this.scrollTop = scrollTop;
 		}, () => {
 			if (this.currentRepo !== null) {
@@ -532,8 +532,9 @@ class SettingsWidget {
 
 		alterClass(this.widgetElem, CLASS_LOADING, this.loading);
 		this.loadingElem.innerHTML = this.loading ? '<span>' + SVG_ICONS.loading + 'Loading ...</span>' : '';
-		this.widgetElem.scrollTop = this.scrollTop;
-		this.loadingElem.style.top = (this.scrollTop + (this.widgetElem.clientHeight / 2) - 12) + 'px';
+		const scrollWrap = document.getElementById('settingsScrollWrap')!;
+		scrollWrap.scrollTop = this.scrollTop;
+		this.loadingElem.style.top = (this.scrollTop + (scrollWrap.clientHeight / 2) - 12) + 'px';
 	}
 
 

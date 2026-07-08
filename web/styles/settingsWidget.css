@@ -1,5 +1,6 @@
 #settingsWidget{
-	display:block;
+	display:flex;
+	flex-direction:column;
 	position:fixed;
 	top:-158px;
 	right:28px;
@@ -16,9 +17,19 @@
 	fill-opacity:0.7;
 	-webkit-user-select:none;
 	user-select:none;
+	max-height:90vh;
+}
+
+#settingsHeader{
+	position:relative;
+	flex-shrink:0;
+}
+
+#settingsScrollWrap{
+	flex:1 1 auto;
 	overflow-x:hidden;
 	overflow-y:auto;
-	max-height:90vh;
+	min-height:0;
 }
 #settingsWidget.active{
 	top:0;
@@ -231,7 +242,7 @@
 	width:24px;
 	height:24px;
 	top:8px;
-	right:10px;
+	right:0;
 	cursor:pointer;
 	z-index:33;
 }
