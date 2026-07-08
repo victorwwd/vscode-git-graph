@@ -145,11 +145,13 @@
 					"type": "string",
 					"enum": [
 						"Inline",
-						"Docked to Bottom"
+						"Docked to Bottom",
+						"Docked to Right"
 					],
 					"enumDescriptions": [
 						"Show the Commit Details View inline with the graph & commits.",
-						"Show the Commit Details View docked to the bottom of the Git Graph View."
+						"Show the Commit Details View docked to the bottom of the Git Graph View.",
+						"Show the Commit Details View docked to the right of the Git Graph View."
 					],
 					"default": "Inline",
 					"description": "Specifies where the Commit Details View is rendered in the Git Graph View."
@@ -1317,11 +1319,13 @@
 					"type": "string",
 					"enum": [
 						"Inline",
-						"Docked to Bottom"
+						"Docked to Bottom",
+						"Docked to Right"
 					],
 					"enumDescriptions": [
 						"Show the Commit Details View inline with the graph",
-						"Show the Commit Details View docked to the bottom of the Git Graph view"
+						"Show the Commit Details View docked to the bottom of the Git Graph view",
+						"Show the Commit Details View docked to the right of the Git Graph view"
 					],
 					"default": "Inline",
 					"description": "Specifies where the Commit Details View is rendered in the Git Graph view.",

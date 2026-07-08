@@ -204,6 +204,7 @@ export type PullRequestConfig = PullRequestConfigBuiltIn | PullRequestConfigCust
 export interface GitRepoState {
 	cdvDivider: number;
 	cdvHeight: number;
+	cdvWidth: number;
 	columnWidths: ColumnWidth[] | null;
 	commitOrdering: RepoCommitOrdering;
 	fileViewType: FileViewType;
@@ -344,7 +345,8 @@ export const enum BooleanOverride {
 
 export const enum CommitDetailsViewLocation {
 	Inline,
-	DockedToBottom
+	DockedToBottom,
+	DockedToRight
 }
 
 

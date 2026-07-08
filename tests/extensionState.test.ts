@@ -59,6 +59,7 @@ describe('ExtensionState', () => {
 			const repoState: GitRepoState = {
 				cdvDivider: 0.5,
 				cdvHeight: 250,
+				cdvWidth: 500,
 				columnWidths: null,
 				commitOrdering: RepoCommitOrdering.AuthorDate,
 				fileViewType: FileViewType.List,
@@ -109,6 +110,7 @@ describe('ExtensionState', () => {
 				'/path/to/repo': {
 					cdvDivider: 0.5,
 					cdvHeight: 250,
+					cdvWidth: 500,
 					columnWidths: null,
 					commitOrdering: RepoCommitOrdering.Default,
 					fileViewType: FileViewType.Default,
@@ -149,6 +151,7 @@ describe('ExtensionState', () => {
 				'/path/to/repo': {
 					cdvDivider: 0.5,
 					cdvHeight: 250,
+					cdvWidth: 500,
 					columnWidths: null,
 					commitOrdering: RepoCommitOrdering.Default,
 					fileViewType: FileViewType.Default,
@@ -189,6 +192,7 @@ describe('ExtensionState', () => {
 				'/path/to/repo': {
 					cdvDivider: 0.5,
 					cdvHeight: 250,
+					cdvWidth: 500,
 					columnWidths: null,
 					commitOrdering: RepoCommitOrdering.Default,
 					fileViewType: FileViewType.Default,
@@ -229,6 +233,7 @@ describe('ExtensionState', () => {
 				'/path/to/repo': {
 					cdvDivider: 0.5,
 					cdvHeight: 250,
+					cdvWidth: 500,
 					columnWidths: null,
 					commitOrdering: RepoCommitOrdering.Default,
 					fileViewType: FileViewType.Default,
@@ -269,6 +274,7 @@ describe('ExtensionState', () => {
 				'/path/to/repo': {
 					cdvDivider: 0.5,
 					cdvHeight: 250,
+					cdvWidth: 500,
 					columnWidths: null,
 					commitOrdering: RepoCommitOrdering.Default,
 					fileViewType: FileViewType.Default,
@@ -312,6 +318,7 @@ describe('ExtensionState', () => {
 				'/path/to/repo-1': {
 					cdvDivider: 0.5,
 					cdvHeight: 250,
+					cdvWidth: 500,
 					columnWidths: null,
 					commitOrdering: RepoCommitOrdering.Default,
 					fileViewType: FileViewType.Default,
@@ -335,6 +342,7 @@ describe('ExtensionState', () => {
 				'/path/to/repo-2': {
 					cdvDivider: 0.5,
 					cdvHeight: 250,
+					cdvWidth: 500,
 					columnWidths: null,
 					commitOrdering: RepoCommitOrdering.Default,
 					fileViewType: FileViewType.Default,

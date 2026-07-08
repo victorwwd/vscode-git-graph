@@ -72,9 +72,14 @@ class Config {
 			fileViewType: this.getRenamedExtensionSetting<string>('commitDetailsView.fileView.type', 'defaultFileViewType', 'File Tree') === 'File List'
 				? FileViewType.List
 				: FileViewType.Tree,
-			location: this.getRenamedExtensionSetting<string>('commitDetailsView.location', 'commitDetailsViewLocation', 'Inline') === 'Docked to Bottom'
-				? CommitDetailsViewLocation.DockedToBottom
-				: CommitDetailsViewLocation.Inline
+			location: (() => {
+				const loc = this.getRenamedExtensionSetting<string>('commitDetailsView.location', 'commitDetailsViewLocation', 'Inline');
+				return loc === 'Docked to Bottom'
+					? CommitDetailsViewLocation.DockedToBottom
+					: (loc === 'Docked to Right'
+						? CommitDetailsViewLocation.DockedToRight
+						: CommitDetailsViewLocation.Inline);
+			})()
 		};
 	}
 

@@ -325,6 +325,39 @@ table { border-collapse: collapse; }
 	white-space:normal;
 	cursor:default;
 }
+#cdv.dockedRight{
+	display:block;
+	position:fixed;
+	top:0;
+	right:0;
+	bottom:0;
+	width:500px;
+	background-color:rgba(128,128,128,0.1);
+	font-size:13px;
+	line-height:18px;
+	white-space:normal;
+	cursor:default;
+	border-left:2px solid rgba(128,128,128,0.2);
+}
+/* In the right-docked panel the controls stay on the right edge (vertical), same as bottom dock */
+#cdv.dockedRight #cdvContent{
+	top:0;
+	bottom:0;
+	left:0;
+	right:32px;
+}
+#cdv.dockedRight #cdvControls{
+	top:0;
+	bottom:0;
+	left:auto;
+	right:0;
+	width:32px;
+	height:auto;
+}
+#cdv.dockedRight #cdvDivider{
+	top:0;
+	bottom:0;
+}
 #cdvContent{
 	position:absolute;
 	left:0;
@@ -573,6 +606,15 @@ table { border-collapse: collapse; }
 	right:0;
 	height:6px;
 	cursor:row-resize;
+}
+.cdvWidthResize{
+	position:absolute;
+	left:0;
+	top:0;
+	bottom:0;
+	width:6px;
+	cursor:col-resize;
+	z-index:5;
 }
 
 #cdv.inline #cdvContent, #cdv.inline #cdvControls{

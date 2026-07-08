@@ -3105,6 +3105,7 @@ class GitGraphView {
 		}
 		if (isDocked) {
 			this.viewElem.style.bottom = '0px';
+			this.viewElem.style.right = '0px';
 		}
 		if (expandedCommit.commitElem !== null) {
 			expandedCommit.commitElem.classList.remove(CLASS_COMMIT_DETAILS_OPEN);
@@ -3258,7 +3259,7 @@ class GitGraphView {
 		if (elem === null) {
 			elem = document.createElement(isDocked ? 'div' : 'tr');
 			elem.id = 'cdv';
-			elem.className = isDocked ? 'docked' : 'inline';
+			elem.className = !isDocked ? 'inline' : (this.isCdvDockedRight() ? 'dockedRight' : 'docked');
 			this.setCdvHeight(elem, isDocked);
 			if (isDocked) {
 				document.body.appendChild(elem);
@@ -3314,7 +3315,7 @@ class GitGraphView {
 			(codeReviewPossible ? '<div id="cdvCodeReview" class="cdvControlBtn">' + SVG_ICONS.review + '</div>' : '') +
 			(!expandedCommit.loading ? '<div id="cdvFileViewTypeToggle" class="cdvControlBtn cdvFileViewTypeBtn"></div><div id="cdvFolderToggle" class="cdvControlBtn cdvFolderBtn"></div><div id="cdvCopyAllPaths" class="cdvControlBtn" title="Copy All File Paths to Clipboard">' + SVG_ICONS.copy + '</div><div id="cdvMultiFileDiff" class="cdvControlBtn" title="Open All Changes in Multi-File Diff">' + SVG_ICONS.multiFileDiff + '</div>' : '') +
 			(externalDiffPossible ? '<div id="cdvExternalDiff" class="cdvControlBtn">' + SVG_ICONS.linkExternal + '</div>' : '') +
-			'</div><div class="cdvHeightResize"></div>';
+			'</div><div class="' + (this.isCdvDockedRight() ? 'cdvWidthResize' : 'cdvHeightResize') + '"></div>';
 
 		elem.innerHTML = isDocked ? html : '<td><div class="cdvHeightResize"></div></td><td colspan="' + (this.getNumColumns() - 1) + '"><div id="cdvContentWrapper">' + html + '</div></td>';
 		this.setCdvDivider();
@@ -3356,6 +3357,7 @@ class GitGraphView {
 		}
 
 		this.makeCdvResizable();
+		if (this.isCdvDockedRight()) this.makeCdvRightResizable();
 		document.getElementById('cdvClose')!.addEventListener('click', () => {
 			this.closeCommitDetails(true);
 		});
@@ -3547,8 +3549,12 @@ class GitGraphView {
 
 		let heightPx = height + 'px';
 		if (isDocked) {
-			this.viewElem.style.bottom = heightPx;
-			elem.style.height = heightPx;
+			if (this.isCdvDockedRight()) {
+				this.setCdvWidth(elem);
+			} else {
+				this.viewElem.style.bottom = heightPx;
+				elem.style.height = heightPx;
+			}
 			return;
 		}
 		let inlineElem = document.getElementById('cdvContentWrapper');
@@ -3564,6 +3570,21 @@ class GitGraphView {
 			elem.style.height = heightPx;
 		}
 		this.renderGraph();
+	}
+
+	private setCdvWidth(elem: HTMLElement) {
+		let width = this.gitRepos[this.currentRepo].cdvWidth, windowWidth = window.innerWidth;
+		if (width > windowWidth - 100) {
+			width = Math.max(windowWidth - 100, 200);
+			if (width !== this.gitRepos[this.currentRepo].cdvWidth) {
+				this.gitRepos[this.currentRepo].cdvWidth = width;
+				this.saveRepoState();
+			}
+		}
+
+		let widthPx = width + 'px';
+		this.viewElem.style.right = widthPx;
+		elem.style.width = widthPx;
 	}
 
 	private setCdvDivider() {
@@ -3604,6 +3625,38 @@ class GitGraphView {
 		addListenerToClass('cdvHeightResize', 'mousedown', (e) => {
 			prevY = (<MouseEvent>e).pageY;
 			eventOverlay.create('rowResize', processResizingCdvHeight, stopResizingCdvHeight);
+		});
+	}
+
+	private makeCdvRightResizable() {
+		let prevX = -1;
+
+		const processResizingCdvWidth: EventListener = (e) => {
+			if (prevX < 0) return;
+			let delta = (<MouseEvent>e).pageX - prevX, windowWidth = window.innerWidth;
+			prevX = (<MouseEvent>e).pageX;
+			// Handle sits on the left edge of the right-docked panel: dragging left (negative delta) widens it
+			let width = this.gitRepos[this.currentRepo].cdvWidth - delta;
+			if (width < 200) width = 200;
+			if (width > windowWidth - 100) width = Math.max(windowWidth - 100, 200);
+
+			if (this.gitRepos[this.currentRepo].cdvWidth !== width) {
+				this.gitRepos[this.currentRepo].cdvWidth = width;
+				let elem = document.getElementById('cdv');
+				if (elem !== null) this.setCdvWidth(elem);
+			}
+		};
+		const stopResizingCdvWidth: EventListener = (e) => {
+			if (prevX < 0) return;
+			processResizingCdvWidth(e);
+			this.saveRepoState();
+			prevX = -1;
+			eventOverlay.remove();
+		};
+
+		addListenerToClass('cdvWidthResize', 'mousedown', (e) => {
+			prevX = (<MouseEvent>e).pageX;
+			eventOverlay.create('colResize', processResizingCdvWidth, stopResizingCdvWidth);
 		});
 	}
 
@@ -3692,7 +3745,12 @@ class GitGraphView {
 	}
 
 	private isCdvDocked() {
-		return this.config.commitDetailsView.location === GG.CommitDetailsViewLocation.DockedToBottom;
+		const location = this.config.commitDetailsView.location;
+		return location === GG.CommitDetailsViewLocation.DockedToBottom || location === GG.CommitDetailsViewLocation.DockedToRight;
+	}
+
+	private isCdvDockedRight() {
+		return this.config.commitDetailsView.location === GG.CommitDetailsViewLocation.DockedToRight;
 	}
 
 	public isCdvOpen(commitHash: string, compareWithHash: string | null) {
