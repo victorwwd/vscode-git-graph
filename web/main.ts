@@ -1,3 +1,5 @@
+const ROW_HEIGHT = 24;
+
 class GitGraphView {
 	private gitRepos: GG.GitRepoSet;
 	private gitBranches: ReadonlyArray<string> = [];
@@ -1215,10 +1217,8 @@ class GitGraphView {
 		this.config.graph.grid.expandY = expandedCommitElem !== null
 			? expandedCommitElem.getBoundingClientRect().height
 			: cdvHeight;
-		this.config.graph.grid.y = this.commits.length > 0 && this.tableElem.children.length > 0
-			? (this.tableElem.children[0].clientHeight - headerHeight - (expandedCommit !== null ? cdvHeight : 0)) / this.commits.length
-			: this.config.graph.grid.y;
-		this.config.graph.grid.offsetY = headerHeight + this.config.graph.grid.y / 2;
+		this.config.graph.grid.y = ROW_HEIGHT;
+		this.config.graph.grid.offsetY = headerHeight + ROW_HEIGHT / 2;
 
 		this.graph.render(expandedCommit);
 	}
@@ -2605,6 +2605,11 @@ class GitGraphView {
 			if (this.config.stickyHeader) {
 				this.alignTableHeaderToControls();
 			}
+
+			if (this.isCdvDockedRight()) {
+				const cdvElem = document.getElementById('cdv');
+				if (cdvElem) cdvElem.style.top = this.controlsElem.clientHeight + 'px';
+			}
 		});
 	}
 
@@ -3111,7 +3116,8 @@ class GitGraphView {
 		}
 		if (isDocked) {
 			this.viewElem.style.bottom = '0px';
-			this.viewElem.style.right = '0px';
+			const contentElem = document.getElementById('content');
+			if (contentElem) contentElem.style.marginRight = '';
 		}
 		if (expandedCommit.commitElem !== null) {
 			expandedCommit.commitElem.classList.remove(CLASS_COMMIT_DETAILS_OPEN);
@@ -3269,6 +3275,9 @@ class GitGraphView {
 			this.setCdvHeight(elem, isDocked);
 			if (isDocked) {
 				document.body.appendChild(elem);
+				if (this.isCdvDockedRight()) {
+					elem.style.top = this.controlsElem.clientHeight + 'px';
+				}
 			} else {
 				insertAfter(elem, expandedCommit.commitElem);
 			}
@@ -3557,6 +3566,7 @@ class GitGraphView {
 		if (isDocked) {
 			if (this.isCdvDockedRight()) {
 				this.setCdvWidth(elem);
+				elem.style.top = this.controlsElem.clientHeight + 'px';
 			} else {
 				this.viewElem.style.bottom = heightPx;
 				elem.style.height = heightPx;
@@ -3589,7 +3599,8 @@ class GitGraphView {
 		}
 
 		let widthPx = width + 'px';
-		this.viewElem.style.right = widthPx;
+		const contentElem = document.getElementById('content')!;
+		contentElem.style.marginRight = widthPx;
 		elem.style.width = widthPx;
 	}
 

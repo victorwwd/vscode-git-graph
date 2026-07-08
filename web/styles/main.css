@@ -209,6 +209,8 @@ code{
 	padding:6px 12px;
 }
 #commitTable tr.commit td{
+	height:24px;
+	overflow:hidden;
 	cursor:pointer;
 }
 
@@ -218,6 +220,8 @@ code{
 
 #commitTable tr.commit span.description{
 	display:flex;
+	flex-wrap:nowrap;
+	overflow:hidden;
 }
 #commitTable tr.commit span.description .commitHeadDot, #commitTable tr.commit td span.description .gitRef{
 	flex-shrink:0;
