@@ -103,6 +103,7 @@ class GitGraphView {
 
 		this.branchDropdown = new Dropdown('branchDropdown', false, true, 'Branches', (values) => {
 			this.currentBranches = values;
+			this.saveRepoStateValue(this.currentRepo, 'savedBranches', values);
 			this.maxCommits = this.config.initialLoadCommits;
 			this.saveState();
 			this.clearCommits();
@@ -110,6 +111,7 @@ class GitGraphView {
 		}, this.config.singleBranchSelect);
 		this.authorDropdown = new Dropdown('authorDropdown', false, true, 'Authors', (values) => {
 			this.currentAuthors = values;
+			this.saveRepoStateValue(this.currentRepo, 'savedAuthors', values);
 			this.maxCommits = this.config.initialLoadCommits;
 			this.saveState();
 			this.clearCommits();
@@ -117,6 +119,7 @@ class GitGraphView {
 		}, this.config.singleAuthorSelect);
 		this.tagDropdown = new Dropdown('tagDropdown', false, true, 'Tags', (values) => {
 			this.currentTags = values;
+			this.saveRepoStateValue(this.currentRepo, 'savedTags', values);
 			this.maxCommits = this.config.initialLoadCommits;
 			this.saveState();
 			this.clearCommits();
@@ -262,9 +265,10 @@ class GitGraphView {
 		this.gitRemotes = [];
 		this.gitStashes = [];
 		this.gitTags = [];
-		this.currentBranches = null;
-		this.currentAuthors = [];
-		this.currentTags = null;
+		const savedState = this.gitRepos[this.currentRepo];
+		this.currentBranches = savedState.savedBranches ? Array.from(savedState.savedBranches) : null;
+		this.currentAuthors = savedState.savedAuthors ? Array.from(savedState.savedAuthors) : [];
+		this.currentTags = savedState.savedTags ? Array.from(savedState.savedTags) : null;
 		this.renderFetchButton();
 		this.closeCommitDetails(false);
 		this.settingsWidget.close();
@@ -330,6 +334,11 @@ class GitGraphView {
 		// Set up branch dropdown options
 		this.branchDropdown.setOptions(this.getBranchOptions(true), this.currentBranches);
 		this.authorDropdown.setOptions(this.getAuthorOptions(), this.currentAuthors);
+
+		// Filter any tags that are currently selected, but no longer exist
+		if (this.currentTags !== null && !(this.currentTags.length === 1 && this.currentTags[0] === '')) {
+			this.currentTags = this.currentTags.filter((tag) => tag === '' || this.gitTags.includes(tag));
+		}
 
 		if (this.currentTags === null || this.currentTags.length === 0) {
 			this.currentTags = [''];
@@ -565,6 +574,12 @@ class GitGraphView {
 			this.saveState();
 
 			this.renderCdvExternalDiffBtn();
+
+			// Filter any authors that are currently selected, but no longer exist
+			if (this.currentAuthors !== null && !(this.currentAuthors.length === 1 && this.currentAuthors[0] === SHOW_ALL_BRANCHES)) {
+				const availableAuthorNames = this.gitConfig && this.gitConfig.authors ? this.gitConfig.authors.map((author) => author.name) : [];
+				this.currentAuthors = this.currentAuthors.filter((author) => availableAuthorNames.includes(author));
+			}
 		}
 		this.settingsWidget.refresh();
 		this.authorDropdown.setOptions(this.getAuthorOptions(), this.currentAuthors);

@@ -216,6 +216,9 @@ export interface GitRepoState {
 	onlyFollowFirstParent: BooleanOverride;
 	onRepoLoadShowCheckedOutBranch: BooleanOverride;
 	onRepoLoadShowSpecificBranches: string[] | null;
+	savedBranches: ReadonlyArray<string> | null;
+	savedAuthors: ReadonlyArray<string> | null;
+	savedTags: ReadonlyArray<string> | null;
 	pullRequestConfig: PullRequestConfig | null;
 	showRemoteBranches: boolean;
 	showRemoteBranchesV2: BooleanOverride;
