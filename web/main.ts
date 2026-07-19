@@ -1610,6 +1610,15 @@ class GitGraphView {
 
 		// Copy options
 		multiSelectActions.push({
+			title: 'Generate Patch from Selected Commits' + ELLIPSIS,
+			visible: visibility.generatePatch,
+			onClick: () => {
+				const selectedCommits = this.getSelectedCommitsArray().reverse();
+				runAction({ command: 'generatePatch', repo: this.currentRepo, commitHashes: selectedCommits }, 'Generating Patch');
+			}
+		});
+
+		multiSelectActions.push({
 			title: 'Copy Selected Commit Hashes to Clipboard',
 			visible: visibility.copyHash,
 			onClick: () => {
@@ -1772,6 +1781,12 @@ class GitGraphView {
 			}
 		], [
 			{
+				title: 'Generate Patch' + ELLIPSIS,
+				visible: visibility.generatePatch,
+				onClick: () => {
+					runAction({ command: 'generatePatch', repo: this.currentRepo, commitHashes: [hash] }, 'Generating Patch');
+				}
+			}, {
 				title: 'Copy Commit Hash to Clipboard',
 				visible: visibility.copyHash,
 				onClick: () => {
@@ -4286,6 +4301,9 @@ window.addEventListener('load', () => {
 				break;
 			case 'createArchive':
 				finishOrDisplayError(msg.error, 'Unable to Create Archive', true);
+				break;
+			case 'generatePatch':
+				finishOrDisplayError(msg.error, 'Unable to Generate Patch', true);
 				break;
 			case 'createBranch':
 				refreshAndDisplayErrors(msg.errors, 'Unable to Create Branch');

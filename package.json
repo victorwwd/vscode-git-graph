@@ -272,6 +272,10 @@
 									"type": "boolean",
 									"title": "Copy Commit Message to Clipboard"
 								},
+								"generatePatch": {
+									"type": "boolean",
+									"title": "Generate Patch..."
+								},
 								"interactiveRebaseFromHere": {
 									"type": "boolean",
 									"title": "Interactive Rebase from here..."

@@ -324,6 +324,7 @@ describe('Config', () => {
 					editMessage: true,
 					copyHash: true,
 					copySubject: true,
+					generatePatch: true,
 					interactiveRebaseFromHere: true
 				},
 				commitDetailsViewFile: {
@@ -412,6 +413,7 @@ describe('Config', () => {
 					editMessage: true,
 					copyHash: true,
 					copySubject: true,
+					generatePatch: true,
 					interactiveRebaseFromHere: true
 				},
 				commitDetailsViewFile: {
@@ -518,6 +520,7 @@ describe('Config', () => {
 					editMessage: true,
 					copyHash: true,
 					copySubject: true,
+					generatePatch: true,
 					interactiveRebaseFromHere: true
 				},
 				commitDetailsViewFile: {

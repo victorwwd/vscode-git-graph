@@ -1325,6 +1325,45 @@ export class DataSource extends Disposable {
 		return this.runGitCommand(['archive', '--format=' + type, '-o', outputFilePath, ref], repo);
 	}
 
+	/**
+	 * Generate a Git patch for one or more commits, and save it to disk.
+	 * @param repo The path of the repository.
+	 * @param commitHashes The hashes of the commits to include in the patch (ordered oldest to newest).
+	 * @param outputFilePath The file path that the patch should be saved to.
+	 * @returns The ErrorInfo from the executed command.
+	 */
+	public async generatePatch(repo: string, commitHashes: ReadonlyArray<string>, outputFilePath: string): Promise<ErrorInfo> {
+		if (commitHashes.length === 0) {
+			return 'No commits were selected to generate a patch.';
+		}
+		try {
+			const patchBuffers = await Promise.all(
+				commitHashes.map(commitHash =>
+					this._spawnGit(['format-patch', '-1', '--stdout', commitHash], repo, (stdout) => stdout)
+				)
+			);
+
+			// Combine buffers while preserving raw bytes (important for non-UTF-8 file encodings like GBK).
+			// Trim trailing whitespace from each patch, join with double newline, append final newline.
+			const trimmed = patchBuffers.map((buf) => trimBufferEnd(buf));
+			const parts: Buffer[] = [];
+			for (let i = 0; i < trimmed.length; i++) {
+				if (i > 0) parts.push(Buffer.from('\n\n'));
+				parts.push(trimmed[i]);
+			}
+			parts.push(Buffer.from('\n'));
+			const combined = Buffer.concat(parts);
+
+			// Normalize CRLF to LF (safe for GBK — 0x0D is never a trail byte).
+			const normalized = replaceCrLfInBuffer(combined);
+
+			await fs.promises.writeFile(outputFilePath, normalized);
+			return null;
+		} catch (error) {
+			return typeof error === 'string' ? error : (error instanceof Error ? error.message : 'Failed to generate the patch.');
+		}
+	}
+
 
 	/* Git Action Methods - Commits */
 
@@ -2419,6 +2458,48 @@ export class DataSource extends Disposable {
 	}
 }
 
+
+/**
+ * Trim trailing whitespace bytes (spaces, tabs, CR, LF) from a Buffer.
+ * Safe for multi-byte encodings like GBK — trailing whitespace bytes (0x20, 0x09, 0x0D, 0x0A)
+ * are all below 0x40 and never appear as trail bytes in GBK/Shift-JIS/EUC-KR.
+ * @param buf The Buffer to trim.
+ * @returns A new Buffer with trailing whitespace removed.
+ */
+function trimBufferEnd(buf: Buffer): Buffer {
+	let end = buf.length;
+	while (end > 0) {
+		const byte = buf[end - 1];
+		if (byte === 0x20 || byte === 0x09 || byte === 0x0D || byte === 0x0A) {
+			end--;
+		} else {
+			break;
+		}
+	}
+	return buf.subarray(0, end);
+}
+
+/**
+ * Replace CRLF (0x0D 0x0A) with LF (0x0A) in a Buffer.
+ * Safe for multi-byte encodings like GBK — 0x0D is never a trail byte.
+ * @param buf The Buffer to normalize.
+ * @returns A new Buffer with CRLF sequences replaced by LF.
+ */
+function replaceCrLfInBuffer(buf: Buffer): Buffer {
+	const chunks: Buffer[] = [];
+	let start = 0;
+	for (let i = 0; i < buf.length - 1; i++) {
+		if (buf[i] === 0x0D && buf[i + 1] === 0x0A) {
+			chunks.push(buf.subarray(start, i));
+			chunks.push(Buffer.from([0x0A]));
+			start = i + 2;
+			i++; // skip the LF
+		}
+	}
+	if (start === 0) return buf; // no CRLF found
+	chunks.push(buf.subarray(start));
+	return Buffer.concat(chunks);
+}
 
 /**
  * Generates the file changes from the diff output and status information.

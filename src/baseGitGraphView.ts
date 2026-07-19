@@ -9,7 +9,7 @@ import { RebaseSession } from './rebaseSession';
 import { RepoFileWatcher } from './repoFileWatcher';
 import { RepoManager } from './repoManager';
 import { ErrorInfo, GitConfigLocation, GitGraphViewInitialState, GitPushBranchMode, GitRepoSet, LoadGitGraphViewTo, RebaseLiveStatus, RequestCommitMessages, RequestDropCommits, RequestMessage, RequestSquashCommits, ResponseMessage } from './types';
-import { UNABLE_TO_FIND_GIT_MSG, UNCOMMITTED, archive, copyFilePathToClipboard, copyFilePathsToClipboard, copyToClipboard, createPullRequest, getNonce, openExtensionSettings, openExternalUrl, openFile, showErrorMessage, viewDiff, viewDiffWithWorkingFile, viewFileAtRevision, viewMultiFileDiff, viewScm } from './utils';
+import { UNABLE_TO_FIND_GIT_MSG, UNCOMMITTED, archive, copyFilePathToClipboard, copyFilePathsToClipboard, copyToClipboard, createPullRequest, generatePatch, getNonce, openExtensionSettings, openExternalUrl, openFile, showErrorMessage, viewDiff, viewDiffWithWorkingFile, viewFileAtRevision, viewMultiFileDiff, viewScm } from './utils';
 import { Disposable, toDisposable } from './utils/disposable';
 
 /**
@@ -341,6 +341,12 @@ export abstract class BaseGitGraphView extends Disposable {
 				this.sendMessage({
 					command: 'createArchive',
 					error: await archive(msg.repo, msg.ref, this.dataSource)
+				});
+				break;
+			case 'generatePatch':
+				this.sendMessage({
+					command: 'generatePatch',
+					error: await generatePatch(msg.repo, msg.commitHashes, this.dataSource)
 				});
 				break;
 			case 'createBranch':

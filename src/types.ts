@@ -390,6 +390,7 @@ export interface ContextMenuActionsVisibility {
 		readonly editMessage: boolean;
 		readonly copyHash: boolean;
 		readonly copySubject: boolean;
+		readonly generatePatch: boolean;
 		readonly interactiveRebaseFromHere: boolean;
 	};
 	readonly commitDetailsViewFile: {
@@ -817,6 +818,14 @@ export interface RequestCreateArchive extends RepoRequest {
 }
 export interface ResponseCreateArchive extends ResponseWithErrorInfo {
 	readonly command: 'createArchive';
+}
+
+export interface RequestGeneratePatch extends RepoRequest {
+	readonly command: 'generatePatch';
+	readonly commitHashes: ReadonlyArray<string>;
+}
+export interface ResponseGeneratePatch extends ResponseWithErrorInfo {
+	readonly command: 'generatePatch';
 }
 
 export interface RequestCreateBranch extends RepoRequest {
@@ -1541,6 +1550,7 @@ export type RequestMessage =
 	| RequestFetch
 	| RequestFetchAvatar
 	| RequestFetchIntoLocalBranch
+	| RequestGeneratePatch
 	| RequestLoadCommits
 	| RequestLoadConfig
 	| RequestLoadRepoInfo
@@ -1618,6 +1628,7 @@ export type ResponseMessage =
 	| ResponseFetch
 	| ResponseFetchAvatar
 	| ResponseFetchIntoLocalBranch
+	| ResponseGeneratePatch
 	| ResponseLoadCommits
 	| ResponseLoadConfig
 	| ResponseLoadRepoInfo

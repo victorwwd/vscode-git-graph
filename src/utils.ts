@@ -277,6 +277,29 @@ export function archive(repo: string, ref: string, dataSource: DataSource): Then
 	);
 }
 
+/**
+ * Generate a Git patch for one or more commits, and save it to disk.
+ * @param repo The path of the repository.
+ * @param commitHashes The hashes of the commits to include in the patch (ordered oldest to newest).
+ * @param dataSource The DataSource instance that can be used to generate the patch.
+ * @returns A promise resolving to the ErrorInfo of the executed command.
+ */
+export function generatePatch(repo: string, commitHashes: ReadonlyArray<string>, dataSource: DataSource): Thenable<ErrorInfo> {
+	if (commitHashes.length === 0) {
+		return Promise.resolve('No commits were selected to generate a patch.');
+	}
+	return vscode.window.showSaveDialog({
+		defaultUri: vscode.Uri.file(path.join(repo, commitHashes.length === 1 ? commitHashes[0].substring(0, 8) + '.patch' : commitHashes.length + '-commits.patch')),
+		saveLabel: 'Generate Patch',
+		filters: { 'Patch File': ['patch'], 'All Files': ['*'] }
+	}).then(
+		(uri) => uri
+			? dataSource.generatePatch(repo, commitHashes, uri.fsPath)
+			: 'No file name was provided for the patch.',
+		() => 'Visual Studio Code was unable to display the save dialog.'
+	);
+}
+
 
 /**
  * Copy the path of a file in a repository to the clipboard.
