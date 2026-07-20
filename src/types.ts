@@ -375,6 +375,7 @@ export interface ContextMenuActionsVisibility {
 		readonly selectInBranchesDropdown: boolean;
 		readonly unselectInBranchesDropdown: boolean;
 		readonly copyName: boolean;
+		readonly applyPatch: boolean;
 	};
 	readonly commit: {
 		readonly addTag: boolean;
@@ -826,6 +827,20 @@ export interface RequestGeneratePatch extends RepoRequest {
 }
 export interface ResponseGeneratePatch extends ResponseWithErrorInfo {
 	readonly command: 'generatePatch';
+}
+
+export interface ApplyPatchOptions {
+	readonly threeWay: boolean;
+	readonly signoff: boolean;
+	readonly keepCr: boolean;
+	readonly noVerify: boolean;
+}
+export interface RequestApplyPatch extends RepoRequest {
+	readonly command: 'applyPatch';
+	readonly options: ApplyPatchOptions;
+}
+export interface ResponseApplyPatch extends ResponseWithErrorInfo {
+	readonly command: 'applyPatch';
 }
 
 export interface RequestCreateBranch extends RepoRequest {
@@ -1551,6 +1566,7 @@ export type RequestMessage =
 	| RequestFetchAvatar
 	| RequestFetchIntoLocalBranch
 	| RequestGeneratePatch
+	| RequestApplyPatch
 	| RequestLoadCommits
 	| RequestLoadConfig
 	| RequestLoadRepoInfo
@@ -1629,6 +1645,7 @@ export type ResponseMessage =
 	| ResponseFetchAvatar
 	| ResponseFetchIntoLocalBranch
 	| ResponseGeneratePatch
+	| ResponseApplyPatch
 	| ResponseLoadCommits
 	| ResponseLoadConfig
 	| ResponseLoadRepoInfo

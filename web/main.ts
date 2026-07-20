@@ -1550,6 +1550,11 @@ class GitGraphView {
 			}
 		], [
 			{
+				title: 'Apply Patch' + ELLIPSIS,
+				visible: visibility.applyPatch && this.gitBranchHead === refName,
+				onClick: () => this.applyPatchAction(target)
+			},
+			{
 				title: 'Create Archive',
 				visible: visibility.createArchive,
 				onClick: () => {
@@ -2246,6 +2251,27 @@ class GitGraphView {
 
 	private fetchFromRemotesAction() {
 		runAction({ command: 'fetch', repo: this.currentRepo, name: null, prune: this.config.fetchAndPrune, pruneTags: this.config.fetchAndPruneTags }, 'Fetching from Remote(s)');
+	}
+
+	private applyPatchAction(target: DialogTarget & RefTarget) {
+		const inputs: DialogInput[] = [
+			{ type: DialogInputType.Checkbox, name: 'Fall back on 3-way merge', value: false, info: 'If the patch fails to apply, attempt a 3-way merge (--3way)' },
+			{ type: DialogInputType.Checkbox, name: 'Add Signed-off-by', value: false, info: 'Add a Signed-off-by trailer to the commits (--signoff)' },
+			{ type: DialogInputType.Checkbox, name: 'Keep CR line endings', value: false, info: 'Do not strip CR (\r) from lines ending with CRLF (--keep-cr)' },
+			{ type: DialogInputType.Checkbox, name: 'Skip hooks', value: false, info: 'Bypass the pre-applypatch and applypatch-msg hooks (--no-verify)' }
+		];
+		dialog.showForm('Apply one or more patch files to the current branch <b><i>' + escapeHtml(this.gitBranchHead!) + '</i></b>:', inputs, 'Select Patch File(s) & Apply', (values) => {
+			runAction({
+				command: 'applyPatch',
+				repo: this.currentRepo,
+				options: {
+					threeWay: <boolean>values[0],
+					signoff: <boolean>values[1],
+					keepCr: <boolean>values[2],
+					noVerify: <boolean>values[3]
+				}
+			}, 'Applying Patch');
+		}, target);
 	}
 
 	private mergeAction(obj: string, name: string, actionOn: GG.MergeActionOn, target: DialogTarget & (CommitTarget | RefTarget)) {
@@ -4304,6 +4330,9 @@ window.addEventListener('load', () => {
 				break;
 			case 'generatePatch':
 				finishOrDisplayError(msg.error, 'Unable to Generate Patch', true);
+				break;
+			case 'applyPatch':
+				refreshOrDisplayError(msg.error, 'Unable to Apply Patch', true);
 				break;
 			case 'createBranch':
 				refreshAndDisplayErrors(msg.errors, 'Unable to Create Branch');

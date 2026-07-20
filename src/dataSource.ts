@@ -6,7 +6,7 @@ import * as vscode from 'vscode';
 import { AskpassEnvironment, AskpassManager } from './askpass/askpassManager';
 import { getConfig } from './config';
 import { Logger } from './logger';
-import { ActionedUser, CommitOrdering, DateType, DeepWriteable, ErrorInfo, ErrorInfoExtensionPrefix, GitCommit, GitCommitDetails, GitCommitStash, GitConfigLocation, GitFileChange, GitFileStatus, GitPushBranchMode, GitRepoConfig, GitRepoConfigBranches, GitResetMode, GitSignature, GitSignatureStatus, GitStash, GitTagDetails, MergeActionOn, RebaseActionOn, RebaseCandidate, SquashMessageFormat, TagSorting, TagType, Writeable } from './types';
+import { ActionedUser, ApplyPatchOptions, CommitOrdering, DateType, DeepWriteable, ErrorInfo, ErrorInfoExtensionPrefix, GitCommit, GitCommitDetails, GitCommitStash, GitConfigLocation, GitFileChange, GitFileStatus, GitPushBranchMode, GitRepoConfig, GitRepoConfigBranches, GitResetMode, GitSignature, GitSignatureStatus, GitStash, GitTagDetails, MergeActionOn, RebaseActionOn, RebaseCandidate, SquashMessageFormat, TagSorting, TagType, Writeable } from './types';
 import { GitExecutable, GitVersionRequirement, UNABLE_TO_FIND_GIT_MSG, UNCOMMITTED, abbrevCommit, constructIncompatibleGitVersionMessage, doesVersionMeetRequirement, getPathFromStr, getPathFromUri, openGitTerminal, pathWithTrailingSlash, realpath, resolveSpawnOutput, showErrorMessage } from './utils';
 import { Disposable } from './utils/disposable';
 import { Event } from './utils/event';
@@ -1362,6 +1362,25 @@ export class DataSource extends Disposable {
 		} catch (error) {
 			return typeof error === 'string' ? error : (error instanceof Error ? error.message : 'Failed to generate the patch.');
 		}
+	}
+
+	/**
+	 * Apply one or more Git patch files to the repository via `git am`.
+	 * @param repo The path of the repository.
+	 * @param filePaths The sorted file paths of the patch files to apply.
+	 * @param options The options controlling `git am` flags.
+	 * @returns The ErrorInfo from the executed command.
+	 */
+	public applyPatch(repo: string, filePaths: ReadonlyArray<string>, options: ApplyPatchOptions): Thenable<ErrorInfo> {
+		if (filePaths.length === 0) {
+			return Promise.resolve('No patch files were selected to apply.');
+		}
+		const flags: string[] = [];
+		if (options.threeWay) flags.push('--3way');
+		if (options.signoff) flags.push('--signoff');
+		if (options.keepCr) flags.push('--keep-cr');
+		if (options.noVerify) flags.push('--no-verify');
+		return this.runGitCommand(['am', ...flags, '--', ...filePaths], repo);
 	}
 
 

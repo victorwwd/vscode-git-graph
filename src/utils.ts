@@ -6,7 +6,7 @@ import { getConfig } from './config';
 import { DataSource } from './dataSource';
 import { DiffSide, encodeDiffDocUri } from './diffDocProvider';
 import { ExtensionState } from './extensionState';
-import { ErrorInfo, GitFileStatus, GitRepoSet, MultiFileDiffItem, PullRequestConfig, PullRequestProvider, RepoDropdownOrder } from './types';
+import { ApplyPatchOptions, ErrorInfo, GitFileStatus, GitRepoSet, MultiFileDiffItem, PullRequestConfig, PullRequestProvider, RepoDropdownOrder } from './types';
 
 export const UNCOMMITTED = '*';
 export const UNABLE_TO_FIND_GIT_MSG = 'Unable to find a Git executable. Either: Set the Visual Studio Code Setting "git.path" to the path and filename of an existing Git executable, or install Git and restart Visual Studio Code.';
@@ -297,6 +297,31 @@ export function generatePatch(repo: string, commitHashes: ReadonlyArray<string>,
 			? dataSource.generatePatch(repo, commitHashes, uri.fsPath)
 			: 'No file name was provided for the patch.',
 		() => 'Visual Studio Code was unable to display the save dialog.'
+	);
+}
+
+
+/**
+ * Apply one or more Git patch files to the repository.
+ * @param repo The path of the repository.
+ * @param options The options controlling `git am` flags.
+ * @param dataSource The DataSource instance that can be used to apply the patch.
+ * @returns A promise resolving to the ErrorInfo of the executed command, or null if the user cancelled the dialog.
+ */
+export function applyPatch(repo: string, options: ApplyPatchOptions, dataSource: DataSource): Thenable<ErrorInfo | null> {
+	return vscode.window.showOpenDialog({
+		canSelectMany: true,
+		filters: { 'Patch File': ['patch'], 'All Files': ['*'] },
+		openLabel: 'Apply Patch'
+	}).then(
+		(uris) => {
+			if (!uris || uris.length === 0) return null;
+			const filePaths = uris
+				.map((uri) => uri.fsPath)
+				.sort((a, b) => path.basename(a).localeCompare(path.basename(b), undefined, { numeric: true }));
+			return dataSource.applyPatch(repo, filePaths, options);
+		},
+		() => 'Visual Studio Code was unable to display the open dialog.'
 	);
 }
 

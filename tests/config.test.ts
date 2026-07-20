@@ -308,7 +308,8 @@ describe('Config', () => {
 					createArchive: true,
 					selectInBranchesDropdown: true,
 					unselectInBranchesDropdown: true,
-					copyName: true
+					copyName: true,
+					applyPatch: true
 				},
 				commit: {
 					addTag: true,
@@ -397,7 +398,8 @@ describe('Config', () => {
 					createArchive: true,
 					selectInBranchesDropdown: true,
 					unselectInBranchesDropdown: true,
-					copyName: true
+					copyName: true,
+					applyPatch: true
 				},
 				commit: {
 					addTag: true,
@@ -504,7 +506,8 @@ describe('Config', () => {
 					createArchive: true,
 					selectInBranchesDropdown: true,
 					unselectInBranchesDropdown: true,
-					copyName: true
+					copyName: true,
+					applyPatch: true
 				},
 				commit: {
 					addTag: true,

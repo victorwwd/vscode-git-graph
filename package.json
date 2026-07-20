@@ -218,6 +218,10 @@
 								"copyName": {
 									"type": "boolean",
 									"title": "Copy Branch Name to Clipboard"
+								},
+								"applyPatch": {
+									"type": "boolean",
+									"title": "Apply Patch..."
 								}
 							}
 						},
