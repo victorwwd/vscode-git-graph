@@ -204,6 +204,10 @@ export const workspace = {
 	workspaceFolders: <{ uri: Uri, index: number }[] | undefined>undefined
 };
 
+export const extensions = {
+	getExtension: jest.fn(() => undefined)
+};
+
 function createWebviewPanel(viewType: string, title: string, _showOptions: ViewColumn | { viewColumn: ViewColumn, preserveFocus?: boolean }, _options?: vscode.WebviewPanelOptions & vscode.WebviewOptions) {
 	const mocks: WebviewPanelMocks = {
 		messages: [],
