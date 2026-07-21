@@ -68,6 +68,7 @@ declare global {
 		readonly selectedCommits: string[];
 		readonly findWidget: FindWidgetState;
 		readonly settingsWidget: SettingsWidgetState;
+		readonly worktreeWidget: WorktreeWidgetState;
 	}
 
 

@@ -303,6 +303,7 @@ describe('Config', () => {
 					push: true,
 					pull: true,
 					createBranch: true,
+					createWorktree: true,
 					viewIssue: true,
 					createPullRequest: true,
 					createArchive: true,
@@ -314,6 +315,7 @@ describe('Config', () => {
 				commit: {
 					addTag: true,
 					createBranch: true,
+					createWorktree: true,
 					checkout: true,
 					cherrypick: true,
 					revert: true,
@@ -373,6 +375,13 @@ describe('Config', () => {
 					reset: true,
 					clean: true,
 					openSourceControlView: true
+				},
+				worktree: {
+					open: true,
+					remove: true,
+					lock: true,
+					unlock: true,
+					copyPath: true
 				}
 			});
 		});
@@ -393,6 +402,7 @@ describe('Config', () => {
 					push: true,
 					pull: true,
 					createBranch: true,
+					createWorktree: true,
 					viewIssue: true,
 					createPullRequest: true,
 					createArchive: true,
@@ -404,6 +414,7 @@ describe('Config', () => {
 				commit: {
 					addTag: true,
 					createBranch: true,
+					createWorktree: true,
 					checkout: true,
 					cherrypick: true,
 					revert: true,
@@ -463,6 +474,13 @@ describe('Config', () => {
 					reset: true,
 					clean: true,
 					openSourceControlView: true
+				},
+				worktree: {
+					open: true,
+					remove: true,
+					lock: true,
+					unlock: true,
+					copyPath: true
 				}
 			});
 		});
@@ -501,6 +519,7 @@ describe('Config', () => {
 					push: true,
 					pull: true,
 					createBranch: true,
+					createWorktree: true,
 					viewIssue: true,
 					createPullRequest: true,
 					createArchive: true,
@@ -512,6 +531,7 @@ describe('Config', () => {
 				commit: {
 					addTag: true,
 					createBranch: true,
+					createWorktree: true,
 					checkout: false,
 					cherrypick: true,
 					revert: true,
@@ -571,6 +591,13 @@ describe('Config', () => {
 					reset: true,
 					clean: true,
 					openSourceControlView: true
+				},
+				worktree: {
+					open: true,
+					remove: true,
+					lock: true,
+					unlock: true,
+					copyPath: true
 				}
 			});
 		});
@@ -950,6 +977,9 @@ describe('Config', () => {
 			expect(workspaceConfiguration.get).toBeCalledWith('dialog.resetUncommittedChanges.mode', 'Mixed');
 			expect(workspaceConfiguration.get).toBeCalledWith('dialog.stashUncommittedChanges.includeUntracked', true);
 			expect(value).toStrictEqual({
+				addWorktree: {
+					force: false
+				},
 				addTag: {
 					pushToRemote: true,
 					type: TagType.Annotated
@@ -1058,6 +1088,9 @@ describe('Config', () => {
 			expect(workspaceConfiguration.get).toBeCalledWith('dialog.resetUncommittedChanges.mode', 'Mixed');
 			expect(workspaceConfiguration.get).toBeCalledWith('dialog.stashUncommittedChanges.includeUntracked', true);
 			expect(value).toStrictEqual({
+				addWorktree: {
+					force: false
+				},
 				addTag: {
 					pushToRemote: false,
 					type: TagType.Annotated
@@ -1166,6 +1199,9 @@ describe('Config', () => {
 			expect(workspaceConfiguration.get).toBeCalledWith('dialog.resetUncommittedChanges.mode', 'Mixed');
 			expect(workspaceConfiguration.get).toBeCalledWith('dialog.stashUncommittedChanges.includeUntracked', true);
 			expect(value).toStrictEqual({
+				addWorktree: {
+					force: false
+				},
 				addTag: {
 					pushToRemote: true,
 					type: TagType.Annotated
@@ -1274,6 +1310,9 @@ describe('Config', () => {
 			expect(workspaceConfiguration.get).toBeCalledWith('dialog.resetUncommittedChanges.mode', 'Mixed');
 			expect(workspaceConfiguration.get).toBeCalledWith('dialog.stashUncommittedChanges.includeUntracked', true);
 			expect(value).toStrictEqual({
+				addWorktree: {
+					force: false
+				},
 				addTag: {
 					pushToRemote: false,
 					type: TagType.Annotated
@@ -1366,6 +1405,9 @@ describe('Config', () => {
 			expect(workspaceConfiguration.get).toBeCalledWith('dialog.resetUncommittedChanges.mode', 'Mixed');
 			expect(workspaceConfiguration.get).toBeCalledWith('dialog.stashUncommittedChanges.includeUntracked', true);
 			expect(value).toStrictEqual({
+				addWorktree: {
+					force: false
+				},
 				addTag: {
 					pushToRemote: false,
 					type: TagType.Annotated
@@ -1451,6 +1493,9 @@ describe('Config', () => {
 			expect(workspaceConfiguration.get).toBeCalledWith('dialog.resetUncommittedChanges.mode', 'Mixed');
 			expect(workspaceConfiguration.get).toBeCalledWith('dialog.stashUncommittedChanges.includeUntracked', true);
 			expect(value).toStrictEqual({
+				addWorktree: {
+					force: false
+				},
 				addTag: {
 					pushToRemote: false,
 					type: TagType.Annotated

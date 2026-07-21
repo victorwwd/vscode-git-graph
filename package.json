@@ -175,6 +175,10 @@
 									"type": "boolean",
 									"title": "Create Branch..."
 								},
+								"createWorktree": {
+									"type": "boolean",
+									"title": "Create Worktree Here..."
+								},
 								"delete": {
 									"type": "boolean",
 									"title": "Delete Branch..."
@@ -235,6 +239,10 @@
 								"createBranch": {
 									"type": "boolean",
 									"title": "Create Branch..."
+								},
+								"createWorktree": {
+									"type": "boolean",
+									"title": "Create Worktree Here..."
 								},
 								"checkout": {
 									"type": "boolean",
@@ -454,6 +462,31 @@
 									"title": "Open Source Control View"
 								}
 							}
+						},
+						"worktree": {
+							"type": "object",
+							"properties": {
+								"open": {
+									"type": "boolean",
+									"title": "Open Worktree in New Window"
+								},
+								"remove": {
+									"type": "boolean",
+									"title": "Remove Worktree..."
+								},
+								"lock": {
+									"type": "boolean",
+									"title": "Lock Worktree..."
+								},
+								"unlock": {
+									"type": "boolean",
+									"title": "Unlock Worktree"
+								},
+								"copyPath": {
+									"type": "boolean",
+									"title": "Copy Worktree Path"
+								}
+							}
 						}
 					},
 					"markdownDescription": "Customise which context menu actions are visible. For example, if you want to hide the rebase action from the branch context menu, a suitable value for this setting is `{ \"branch\": { \"rebase\": false } }`. For more information of how to configure this setting, view the documentation [here](https://github.com/hansu/vscode-git-graph/wiki/Extension-Settings#context-menu-actions-visibility)."
@@ -605,6 +638,11 @@
 						"Simplify": true
 					},
 					"description": "An object specifying the default visibility of the items of the tool bar. Example: {\"Remotes\": true\", Simplify\": true}"
+				},
+				"git-graph.dialog.addWorktree.force": {
+					"type": "boolean",
+					"default": false,
+					"description": "Default state of the checkbox indicating whether to force the creation of a worktree (--force), ignoring safety checks such as a branch being already checked out elsewhere."
 				},
 				"git-graph.dialog.addTag.pushToRemote": {
 					"type": "boolean",

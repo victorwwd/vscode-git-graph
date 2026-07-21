@@ -148,6 +148,20 @@ export interface GitTagDetails {
 	readonly signature: GitSignature | null;
 }
 
+export interface GitWorktree {
+	readonly path: string;
+	readonly headHash: string | null; // null when detached or uninitialized
+	readonly branch: string | null; // null => detached HEAD
+	readonly isMain: boolean;
+	readonly isBare: boolean;
+	readonly isDetached: boolean;
+	readonly isLocked: boolean;
+	readonly lockReason: string | null;
+	readonly isPrunable: boolean;
+	readonly prunableReason: string | null;
+	readonly isCurrent: boolean; // true => this worktree's path is the folder currently open as a workspace root
+}
+
 
 /* Git Repo State */
 
@@ -369,6 +383,7 @@ export interface ContextMenuActionsVisibility {
 		readonly push: boolean;
 		readonly pull: boolean;
 		readonly createBranch: boolean;
+		readonly createWorktree: boolean;
 		readonly viewIssue: boolean;
 		readonly createPullRequest: boolean;
 		readonly createArchive: boolean;
@@ -380,6 +395,7 @@ export interface ContextMenuActionsVisibility {
 	readonly commit: {
 		readonly addTag: boolean;
 		readonly createBranch: boolean;
+		readonly createWorktree: boolean;
 		readonly checkout: boolean;
 		readonly cherrypick: boolean;
 		readonly revert: boolean;
@@ -440,6 +456,13 @@ export interface ContextMenuActionsVisibility {
 		readonly clean: boolean;
 		readonly openSourceControlView: boolean;
 	};
+	readonly worktree: {
+		readonly open: boolean;
+		readonly remove: boolean;
+		readonly lock: boolean;
+		readonly unlock: boolean;
+		readonly copyPath: boolean;
+	};
 }
 
 export interface CustomBranchGlobPattern {
@@ -485,6 +508,9 @@ export interface ToolbarButtonVisibility {
 }
 
 export interface DialogDefaults {
+	readonly addWorktree: {
+		readonly force: boolean
+	};
 	readonly addTag: {
 		readonly pushToRemote: boolean,
 		readonly type: TagType
@@ -1167,6 +1193,73 @@ export interface ResponsePruneRemote extends ResponseWithErrorInfo {
 	readonly command: 'pruneRemote';
 }
 
+export interface RequestLoadWorktrees extends RepoRequest {
+	readonly command: 'loadWorktrees';
+}
+export interface ResponseLoadWorktrees extends ResponseWithErrorInfo {
+	readonly command: 'loadWorktrees';
+	readonly worktrees: ReadonlyArray<GitWorktree>;
+}
+
+export interface WorktreeAddOptions {
+	readonly path: string;
+	readonly base: string | null; // null => use current HEAD
+	readonly mode: 'branch' | 'detached'; // branch => create -b <branchName>; detached => --detach
+	readonly branchName: string | null; // required when mode === 'branch'
+	readonly force: boolean; // --force
+}
+export interface RequestAddWorktree extends RepoRequest {
+	readonly command: 'addWorktree';
+	readonly options: WorktreeAddOptions;
+}
+export interface ResponseAddWorktree extends ResponseWithErrorInfo {
+	readonly command: 'addWorktree';
+	readonly conflictWorktreePath: string | null; // set when a branch is already checked out in another worktree
+}
+
+export interface RequestRemoveWorktree extends RepoRequest {
+	readonly command: 'removeWorktree';
+	readonly worktreePath: string;
+	readonly force: boolean;
+}
+export interface ResponseRemoveWorktree extends ResponseWithErrorInfo {
+	readonly command: 'removeWorktree';
+	readonly conflictWorktreePath: string | null;
+}
+
+export interface RequestLockWorktree extends RepoRequest {
+	readonly command: 'lockWorktree';
+	readonly worktreePath: string;
+	readonly reason: string | null;
+}
+export interface ResponseLockWorktree extends ResponseWithErrorInfo {
+	readonly command: 'lockWorktree';
+}
+export interface RequestUnlockWorktree extends RepoRequest {
+	readonly command: 'unlockWorktree';
+	readonly worktreePath: string;
+}
+export interface ResponseUnlockWorktree extends ResponseWithErrorInfo {
+	readonly command: 'unlockWorktree';
+}
+
+export interface RequestPruneWorktrees extends RepoRequest {
+	readonly command: 'pruneWorktrees';
+	readonly dryRun: boolean;
+}
+export interface ResponsePruneWorktrees extends ResponseWithErrorInfo {
+	readonly command: 'pruneWorktrees';
+	readonly preview: ReadonlyArray<string> | null; // list of worktree entries that would be pruned (dryRun only)
+}
+
+export interface RequestOpenWorktreeInNewWindow extends RepoRequest {
+	readonly command: 'openWorktreeInNewWindow';
+	readonly worktreePath: string;
+}
+export interface ResponseOpenWorktreeInNewWindow extends ResponseWithErrorInfo {
+	readonly command: 'openWorktreeInNewWindow';
+}
+
 export interface RequestPullBranch extends RepoRequest {
 	readonly command: 'pullBranch';
 	readonly branchName: string;
@@ -1531,6 +1624,7 @@ export interface ResponseViewScm extends ResponseWithErrorInfo {
 export type RequestMessage =
 	RequestAddRemote
 	| RequestAddTag
+	| RequestAddWorktree
 	| RequestApplyStash
 	| RequestBranchFromStash
 	| RequestCheckoutBranch
@@ -1571,14 +1665,18 @@ export type RequestMessage =
 	| RequestLoadConfig
 	| RequestLoadRepoInfo
 	| RequestLoadRepos
+	| RequestLoadWorktrees
+	| RequestLockWorktree
 	| RequestMerge
 	| RequestOpenExtensionSettings
 	| RequestOpenExternalDirDiff
 	| RequestOpenExternalUrl
 	| RequestOpenFile
 	| RequestOpenTerminal
+	| RequestOpenWorktreeInNewWindow
 	| RequestPopStash
 	| RequestPruneRemote
+	| RequestPruneWorktrees
 	| RequestPullBranch
 	| RequestPushBranch
 	| RequestPushStash
@@ -1588,12 +1686,14 @@ export type RequestMessage =
 	| RequestRebaseList
 	| RequestRebasePromptResponse
 	| RequestRebaseStart
+	| RequestRemoveWorktree
 	| RequestRenameBranch
 	| RequestRescanForRepos
 	| RequestResetFileToRevision
 	| RequestResetToCommit
 	| RequestRevertCommit
 	| RequestUndoLastCommit
+	| RequestUnlockWorktree
 	| RequestSetGlobalViewState
 	| RequestSetRepoState
 	| RequestSquashCommits
@@ -1611,6 +1711,7 @@ export type RequestMessage =
 export type ResponseMessage =
 	ResponseAddRemote
 	| ResponseAddTag
+	| ResponseAddWorktree
 	| ResponseApplyStash
 	| ResponseBranchFromStash
 	| ResponseCheckoutBranch
@@ -1650,14 +1751,18 @@ export type ResponseMessage =
 	| ResponseLoadConfig
 	| ResponseLoadRepoInfo
 	| ResponseLoadRepos
+	| ResponseLoadWorktrees
+	| ResponseLockWorktree
 	| ResponseMerge
 	| ResponseOpenExtensionSettings
 	| ResponseOpenExternalDirDiff
 	| ResponseOpenExternalUrl
 	| ResponseOpenFile
 	| ResponseOpenTerminal
+	| ResponseOpenWorktreeInNewWindow
 	| ResponsePopStash
 	| ResponsePruneRemote
+	| ResponsePruneWorktrees
 	| ResponsePullBranch
 	| ResponsePushBranch
 	| ResponsePushStash
@@ -1669,11 +1774,13 @@ export type ResponseMessage =
 	| ResponseRebaseStart
 	| ResponseRebaseStatus
 	| ResponseRefresh
+	| ResponseRemoveWorktree
 	| ResponseRenameBranch
 	| ResponseResetFileToRevision
 	| ResponseResetToCommit
 	| ResponseRevertCommit
 	| ResponseUndoLastCommit
+	| ResponseUnlockWorktree
 	| ResponseSetGlobalViewState
 	| ResponseSetWorkspaceViewState
 	| ResponseSquashCommits

@@ -205,7 +205,7 @@ class Dialog {
 	 * @param secondaryActioned An optional callback to be invoked when the secondary action is selected by the user.
 	 * @param includeLineBreak Should a line break be added between the message and form inputs.
 	 */
-	public showForm(message: string, inputs: ReadonlyArray<DialogInput>, actionName: string, actioned: (values: DialogInputValue[]) => void, target: DialogTarget | null, secondaryActionName: string = 'Cancel', secondaryActioned: ((values: DialogInputValue[]) => void) | null = null, includeLineBreak: boolean = true) {
+	public showForm(message: string, inputs: ReadonlyArray<DialogInput>, actionName: string, actioned: (values: DialogInputValue[]) => void, target: DialogTarget | null, secondaryActionName: string = 'Cancel', secondaryActioned: ((values: DialogInputValue[]) => void) | null = null, includeLineBreak: boolean = true, validate: ((values: DialogInputValue[]) => string | null) | null = null) {
 		const multiElement = inputs.length > 1;
 		const multiCheckbox = multiElement && inputs.every((input) => input.type === DialogInputType.Checkbox);
 		const infoColRequired = inputs.some((input) => input.type !== DialogInputType.Checkbox && input.type !== DialogInputType.Radio && input.info);
@@ -262,6 +262,15 @@ class Dialog {
 		this.show(DialogType.Form, html, actionName, secondaryActionName, () => {
 			if (areFormValuesInvalid()) return;
 			const values = getFormValues();
+			if (validate !== null) {
+				const error = validate(values);
+				if (error !== null) {
+					// Show the error inline above the form (do NOT close — the user can fix the input).
+					this.showInlineFormError(error);
+					return;
+				}
+			}
+			this.clearInlineFormError();
 			this.close();
 			actioned(values);
 		}, secondaryActioned !== null ? () => {
@@ -326,6 +335,33 @@ class Dialog {
 	 */
 	public showMessage(html: string) {
 		this.show(DialogType.Message, html, null, 'Close', null, null, null);
+	}
+
+	/**
+	 * Show an inline error message at the top of the currently-open form dialog,
+	 * without closing it. Used by form validation (showForm's `validate` callback)
+	 * so the user can fix the input and retry.
+	 * @param message The error message to display.
+	 */
+	public showInlineFormError(message: string) {
+		if (this.elem === null) return;
+		let errorBar = <HTMLElement | null>this.elem.querySelector('.dialogFormError');
+		if (errorBar === null) {
+			errorBar = document.createElement('div');
+			errorBar.className = 'dialogFormError';
+			const dialogContent = this.elem.querySelector('.dialogContent');
+			if (dialogContent !== null) dialogContent.insertBefore(errorBar, dialogContent.firstChild);
+		}
+		errorBar.innerHTML = '<span class="dialogAlert">' + SVG_ICONS.alert + escapeHtml(message) + '</span>';
+	}
+
+	/**
+	 * Clear any inline form error previously shown via {@link showInlineFormError}.
+	 */
+	public clearInlineFormError() {
+		if (this.elem === null) return;
+		const errorBar = <HTMLElement | null>this.elem.querySelector('.dialogFormError');
+		if (errorBar !== null) errorBar.innerHTML = '';
 	}
 
 	/**

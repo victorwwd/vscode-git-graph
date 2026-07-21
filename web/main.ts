@@ -57,6 +57,7 @@ class GitGraphView {
 
 	private readonly findWidget: FindWidget;
 	private readonly settingsWidget: SettingsWidget;
+	private readonly worktreeWidget: WorktreeWidget;
 	private readonly repoDropdown: Dropdown;
 	private readonly branchDropdown: Dropdown;
 	private readonly authorDropdown: Dropdown;
@@ -148,6 +149,7 @@ class GitGraphView {
 
 		this.findWidget = new FindWidget(this);
 		this.settingsWidget = new SettingsWidget(this);
+		this.worktreeWidget = new WorktreeWidget(this);
 
 		alterClass(document.body, CLASS_BRANCH_LABELS_ALIGNED_TO_GRAPH, this.config.referenceLabels.branchLabelsAlignedToGraph);
 		alterClass(document.body, CLASS_TAG_LABELS_RIGHT_ALIGNED, this.config.referenceLabels.tagLabelsOnRight);
@@ -173,6 +175,7 @@ class GitGraphView {
 			this.loadCommits(prevState.commits, prevState.commitHead, prevState.gitTags, prevState.moreCommitsAvailable, prevState.onlyFollowFirstParent);
 			this.findWidget.restoreState(prevState.findWidget);
 			this.settingsWidget.restoreState(prevState.settingsWidget);
+			this.worktreeWidget.restoreState(prevState.worktreeWidget);
 			this.showRemoteBranchesElem.checked = getShowRemoteBranches(this.gitRepos[prevState.currentRepo].showRemoteBranchesV2);
 			this.simplifyByDecorationElem.checked = getSimplifyByDecoration(this.gitRepos[prevState.currentRepo].simplifyByDecoration);
 		}
@@ -190,7 +193,7 @@ class GitGraphView {
 			this.requestLoadRepoInfoAndCommits(false, false);
 		}
 
-		const currentBtn = document.getElementById('currentBtn')!, fetchBtn = document.getElementById('fetchBtn')!, findBtn = document.getElementById('findBtn')!, settingsBtn = document.getElementById('settingsBtn')!, terminalBtn = document.getElementById('terminalBtn')!;
+		const currentBtn = document.getElementById('currentBtn')!, fetchBtn = document.getElementById('fetchBtn')!, findBtn = document.getElementById('findBtn')!, settingsBtn = document.getElementById('settingsBtn')!, worktreesBtn = document.getElementById('worktreesBtn')!, terminalBtn = document.getElementById('terminalBtn')!;
 		currentBtn.innerHTML = SVG_ICONS.current;
 		currentBtn.addEventListener('click', () => {
 			if (this.commitHead) {
@@ -204,6 +207,14 @@ class GitGraphView {
 		findBtn.addEventListener('click', () => this.findWidget.show(true));
 		settingsBtn.innerHTML = SVG_ICONS.gear;
 		settingsBtn.addEventListener('click', () => this.settingsWidget.show(this.currentRepo));
+		worktreesBtn.innerHTML = SVG_ICONS.worktree;
+		worktreesBtn.addEventListener('click', () => {
+			if (this.worktreeWidget.isVisible()) {
+				this.worktreeWidget.close();
+			} else {
+				this.worktreeWidget.show(this.currentRepo);
+			}
+		});
 		terminalBtn.innerHTML = SVG_ICONS.terminal;
 		terminalBtn.addEventListener('click', () => {
 			runAction({
@@ -272,6 +283,7 @@ class GitGraphView {
 		this.renderFetchButton();
 		this.closeCommitDetails(false);
 		this.settingsWidget.close();
+		this.worktreeWidget.close();
 		this.saveState();
 		this.refresh(true);
 	}
@@ -686,6 +698,255 @@ class GitGraphView {
 		return this.gitConfig;
 	}
 
+	public getConfig(): Readonly<GG.GitGraphViewConfig> {
+		return this.config;
+	}
+
+
+	/* Worktree */
+
+	/**
+	 * Apply a loadWorktrees response to the Worktree Widget (no-op if it is not visible).
+	 */
+	public processLoadWorktreesResponse(worktrees: ReadonlyArray<GG.GitWorktree>, error: GG.ErrorInfo) {
+		if (this.worktreeWidget.isVisible()) {
+			this.worktreeWidget.setWorktrees(worktrees, error);
+		}
+	}
+
+	/**
+	 * Handle an addWorktree response: on success reload the list and offer to open the new
+	 * worktree in a new window; on failure show the error (with a jump button if a branch
+	 * conflict was detected).
+	 */
+	public processAddWorktreeResponse(error: GG.ErrorInfo, conflictWorktreePath: string | null) {
+		dialog.closeActionRunning();
+		if (error === null) {
+			this.reloadWorktrees();
+		} else if (conflictWorktreePath !== null) {
+			dialog.showTwoButtons(
+				error + '<br>Open that worktree in a new window?',
+				'Open That Worktree', () => this.openWorktreeInNewWindow(conflictWorktreePath),
+				'Close', () => {},
+				null
+			);
+		} else {
+			dialog.showError('Unable to Create Worktree', error, null, null);
+		}
+	}
+
+	/**
+	 * Handle a removeWorktree response: on success reload the list, otherwise show the error.
+	 */
+	public processRemoveWorktreeResponse(error: GG.ErrorInfo, conflictWorktreePath: string | null) {
+		dialog.closeActionRunning();
+		if (error === null) {
+			this.reloadWorktrees();
+		} else if (conflictWorktreePath !== null) {
+			dialog.showTwoButtons(
+				error + '<br>Open that worktree in a new window?',
+				'Open That Worktree', () => this.openWorktreeInNewWindow(conflictWorktreePath),
+				'Close', () => {},
+				null
+			);
+		} else {
+			dialog.showError('Unable to Remove Worktree', error, null, null);
+		}
+	}
+
+	/**
+	 * Handle a lockWorktree response: on success reload the list, otherwise show the error.
+	 */
+	public processLockWorktreeResponse(error: GG.ErrorInfo) {
+		dialog.closeActionRunning();
+		if (error === null) {
+			this.reloadWorktrees();
+		} else {
+			dialog.showError('Unable to Lock Worktree', error, null, null);
+		}
+	}
+
+	/**
+	 * Handle an unlockWorktree response: on success reload the list, otherwise show the error.
+	 */
+	public processUnlockWorktreeResponse(error: GG.ErrorInfo) {
+		dialog.closeActionRunning();
+		if (error === null) {
+			this.reloadWorktrees();
+		} else {
+			dialog.showError('Unable to Unlock Worktree', error, null, null);
+		}
+	}
+	public processPruneWorktreesResponse(preview: ReadonlyArray<string> | null, error: GG.ErrorInfo) {
+		dialog.closeActionRunning();
+		if (error !== null) {
+			dialog.showError('Unable to Prune Worktrees', error, null, null);
+			return;
+		}
+		if (preview !== null) {
+			// dry-run result
+			if (preview.length === 0) {
+				dialog.showError('No prunable worktree entries were found.', null, null, null);
+			} else {
+				const list = preview.map((name) => '<span class="messageContent">' + escapeHtml(name) + '</span>').join('<br>');
+				dialog.showConfirmation('The following worktree entries will be pruned:<br>' + list, 'Prune', () => {
+					dialog.showActionRunning('Pruning Worktrees');
+					sendMessage({ command: 'pruneWorktrees', repo: this.currentRepo, dryRun: false });
+				}, null);
+			}
+		} else {
+			// real prune completed
+			this.reloadWorktrees();
+		}
+	}
+
+	/**
+	 * Reload the worktree list (used after successful write actions and on refresh notifications).
+	 */
+	public reloadWorktrees() {
+		this.worktreeWidget.refresh();
+	}
+
+	/**
+	 * Whether the Worktree Widget is currently visible.
+	 */
+	public isWorktreeWidgetVisible() {
+		return this.worktreeWidget.isVisible();
+	}
+
+	/**
+	 * Open a worktree folder in a new VS Code window.
+	 */
+	public openWorktreeInNewWindow(worktreePath: string) {
+		// Note: no "action running" overlay here. Opening a new window hands focus to the
+		// new window, so the response that would dismiss the overlay may never reach this
+		// webview (it can be suspended/destroyed) — leaving a stuck "Opening" dialog on return.
+		sendMessage({ command: 'openWorktreeInNewWindow', repo: this.currentRepo, worktreePath: worktreePath });
+	}
+
+	/**
+	 * Copy a worktree path to the clipboard.
+	 */
+	public copyWorktreePath(worktreePath: string) {
+		sendMessage({ command: 'copyToClipboard', type: 'Worktree Path', data: worktreePath });
+	}
+
+	/**
+	 * Open the "Create Worktree" dialog. The auxiliary toolbar entry (no prefilled ref) defaults
+	 * the base to the current HEAD on the backend.
+	 */
+	public addWorktreeAction(prefilledRef: string | null = null, defaultMode: 'branch' | 'detached' = 'branch', target: DialogTarget | null = null) {
+		// Field indices (used for DOM wiring after the form renders):
+		// [0] Path, [1] Based on, [2] Checkout as (Radio), [3] Branch Name, [4] Force
+		const inputs: DialogInput[] = [
+			{ type: DialogInputType.Text, name: 'Worktree Path', default: '', placeholder: '/path/to/new-worktree' },
+			{ type: DialogInputType.Text, name: 'Based on (optional)', default: prefilledRef ?? '', placeholder: 'Defaults to current HEAD if empty' },
+			{ type: DialogInputType.Radio, name: 'Checkout as', default: defaultMode, options: [
+				{ name: 'New Branch', value: 'branch' },
+				{ name: 'Detached HEAD (no branch will be created)', value: 'detached' }
+			] },
+			{ type: DialogInputType.Text, name: 'Branch Name', default: '', placeholder: 'feature-x' },
+			{ type: DialogInputType.Checkbox, name: 'Force', value: this.config.dialogDefaults.addWorktree.force, info: 'Ignore safety checks (e.g. branch already checked out elsewhere)' }
+		];
+		dialog.showForm('Create Worktree', inputs, 'Create', (values) => {
+			const targetPath = (<string>values[0]).trim();
+			const mode = <'branch' | 'detached'>values[2];
+			const branchName = (<string>values[3]).trim();
+			dialog.showActionRunning('Creating Worktree');
+			sendMessage({
+				command: 'addWorktree',
+				repo: this.currentRepo,
+				options: {
+					path: targetPath,
+					base: (<string>values[1]).trim() || null,
+					mode: mode,
+					branchName: mode === 'branch' ? branchName : null,
+					force: <boolean>values[4]
+				}
+			});
+		}, target, 'Cancel', null, true, (values) => {
+			// validate (form stays open on error so the user can fix the input)
+			const targetPath = (<string>values[0]).trim();
+			if (!targetPath) return 'Worktree Path cannot be empty.';
+			const mode = <'branch' | 'detached'>values[2];
+			if (mode === 'branch' && (<string>values[3]).trim() === '') {
+				return 'Branch Name is required when creating a new branch.';
+			}
+			return null;
+		});
+
+		// Manual DOM wiring: show/hide the Branch Name row (index 3) based on the Checkout-as radio (index 2).
+		// The dialog framework renders fields statically, so toggling is done here after showForm.
+		// Note: radio input values are option indices (0/1), not the option.value strings —
+		// the mapping back to 'branch'/'detached' uses the order of the radio options below.
+		const branchNameRow = document.getElementById('dialogInput3')?.closest('tr') || null;
+		if (branchNameRow !== null) {
+			const radios = <NodeListOf<HTMLInputElement>>document.getElementsByName('dialogInput2');
+			const radioModes: ('branch' | 'detached')[] = ['branch', 'detached']; // matches the options order above
+			const sync = () => {
+				let selected = defaultMode;
+				for (let i = 0; i < radios.length; i++) {
+					if (radios[i].checked) { selected = radioModes[i] ?? defaultMode; break; }
+				}
+				branchNameRow.style.display = selected === 'branch' ? '' : 'none';
+			};
+			for (let i = 0; i < radios.length; i++) {
+				radios[i].addEventListener('change', sync);
+			}
+			sync();
+		}
+	}
+
+	/**
+	 * Open the "Remove Worktree" confirmation for a single worktree.
+	 */
+	public removeWorktreeAction(worktree: GG.GitWorktree) {
+		if (worktree.isMain) {
+			dialog.showError('Cannot remove the main worktree.', null, null, null);
+			return;
+		}
+		if (worktree.isCurrent) {
+			dialog.showError('Cannot remove the worktree currently in use. Remove it from another VS Code window.', null, null, null);
+			return;
+		}
+		const message = worktree.isLocked
+			? 'This worktree is locked. Unlock it before removing.'
+			: 'Remove worktree <b>' + escapeHtml(worktree.path) + '</b>? If it has uncommitted changes, you must check "Force remove", which will <b>permanently lose</b> those changes.';
+		dialog.showCheckbox(message, 'Force remove (discard uncommitted changes)', false, 'Remove', (force) => {
+			dialog.showActionRunning('Removing Worktree');
+			sendMessage({ command: 'removeWorktree', repo: this.currentRepo, worktreePath: worktree.path, force: force });
+		}, null);
+	}
+
+	/**
+	 * Open the "Lock Worktree" dialog to collect an optional reason, then lock the worktree.
+	 */
+	public lockWorktreeAction(worktree: GG.GitWorktree) {
+		const inputs: DialogInput[] = [
+			{ type: DialogInputType.Text, name: 'Reason', default: '', placeholder: 'Optional: why is this worktree locked? (shown on hover)', info: 'Locking prevents the worktree from being pruned. The reason is shown when hovering the lock badge.' }
+		];
+		dialog.showForm('Lock Worktree<br><b>' + escapeHtml(worktree.path) + '</b>', inputs, 'Lock', (values) => {
+			dialog.showActionRunning('Locking Worktree');
+			sendMessage({ command: 'lockWorktree', repo: this.currentRepo, worktreePath: worktree.path, reason: (<string>values[0]).trim() || null });
+		}, null);
+	}
+
+	/**
+	 * Unlock a previously locked worktree.
+	 */
+	public unlockWorktreeAction(worktree: GG.GitWorktree) {
+		dialog.showActionRunning('Unlocking Worktree');
+		sendMessage({ command: 'unlockWorktree', repo: this.currentRepo, worktreePath: worktree.path });
+	}
+
+	/**
+	 * Run a dry-run prune to preview stale worktree entries before removing them.
+	 */
+	public pruneWorktreesAction() {
+		dialog.showActionRunning('Checking for prunable worktrees');
+		sendMessage({ command: 'pruneWorktrees', repo: this.currentRepo, dryRun: true });
+	}
+
 	public getRepoState(repo: string): Readonly<GG.GitRepoState> | null {
 		return Object.prototype.hasOwnProperty.call(this.gitRepos, repo)
 			? this.gitRepos[repo]
@@ -854,7 +1115,8 @@ class GitGraphView {
 			scrollTop: this.scrollTop,
 			selectedCommits: Array.from(this.selectedCommits),
 			findWidget: this.findWidget.getState(),
-			settingsWidget: this.settingsWidget.getState()
+			settingsWidget: this.settingsWidget.getState(),
+			worktreeWidget: this.worktreeWidget.getState()
 		});
 	}
 
@@ -1445,6 +1707,10 @@ class GitGraphView {
 				visible: visibility.createBranch,
 				onClick: () => this.createBranchAction(target.hash, '', true, target)
 			}, {
+				title: 'Create Worktree Here' + ELLIPSIS,
+				visible: visibility.createWorktree,
+				onClick: () => this.addWorktreeAction(refName, 'branch', target)
+			}, {
 				title: 'Delete Branch' + ELLIPSIS,
 				visible: visibility.delete && this.gitBranchHead !== refName,
 				onClick: () => {
@@ -1658,6 +1924,10 @@ class GitGraphView {
 				title: 'Create Branch' + ELLIPSIS,
 				visible: visibility.createBranch,
 				onClick: () => this.createBranchAction(hash, '', this.config.dialogDefaults.createBranch.checkout, target)
+			}, {
+				title: 'Create Worktree Here' + ELLIPSIS,
+				visible: visibility.createWorktree,
+				onClick: () => this.addWorktreeAction(hash, 'detached', target)
 			}
 		], [
 			{
@@ -4246,6 +4516,9 @@ window.addEventListener('load', () => {
 			case 'addRemote':
 				refreshOrDisplayError(msg.error, 'Unable to Add Remote', true);
 				break;
+			case 'addWorktree':
+				gitGraph.processAddWorktreeResponse(msg.error, msg.conflictWorktreePath);
+				break;
 			case 'addTag':
 				if (msg.pushToRemote !== null && msg.errors.length === 2 && msg.errors[0] === null && isExtensionErrorInfo(msg.errors[1], GG.ErrorInfoExtensionPrefix.PushTagCommitNotOnRemote)) {
 					gitGraph.refresh(false);
@@ -4403,6 +4676,12 @@ window.addEventListener('load', () => {
 			case 'loadRepos':
 				gitGraph.loadRepos(msg.repos, msg.lastActiveRepo, msg.loadViewTo);
 				break;
+			case 'loadWorktrees':
+				gitGraph.processLoadWorktreesResponse(msg.worktrees, msg.error);
+				break;
+			case 'lockWorktree':
+				gitGraph.processLockWorktreeResponse(msg.error);
+				break;
 			case 'merge':
 				refreshOrDisplayError(msg.error, 'Unable to Merge ' + msg.actionOn);
 				break;
@@ -4421,11 +4700,23 @@ window.addEventListener('load', () => {
 			case 'openTerminal':
 				finishOrDisplayError(msg.error, 'Unable to Open Terminal', true);
 				break;
+			case 'openWorktreeInNewWindow':
+				finishOrDisplayError(msg.error, 'Unable to Open Worktree');
+				break;
 			case 'popStash':
 				refreshOrDisplayError(msg.error, 'Unable to Pop Stash');
 				break;
 			case 'pruneRemote':
 				refreshOrDisplayError(msg.error, 'Unable to Prune Remote');
+				break;
+			case 'pruneWorktrees':
+				gitGraph.processPruneWorktreesResponse(msg.preview, msg.error);
+				break;
+			case 'removeWorktree':
+				gitGraph.processRemoveWorktreeResponse(msg.error, msg.conflictWorktreePath);
+				break;
+			case 'unlockWorktree':
+				gitGraph.processUnlockWorktreeResponse(msg.error);
 				break;
 			case 'pullBranch':
 				refreshOrDisplayError(msg.error, 'Unable to Pull Branch');
@@ -4489,6 +4780,9 @@ window.addEventListener('load', () => {
 				break;
 			case 'refresh':
 				gitGraph.refresh(false);
+				if (gitGraph.isWorktreeWidgetVisible()) {
+					gitGraph.reloadWorktrees();
+				}
 				break;
 			case 'renameBranch':
 				refreshOrDisplayError(msg.error, 'Unable to Rename Branch');

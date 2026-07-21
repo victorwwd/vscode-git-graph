@@ -1,11 +1,9 @@
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { Logger } from './logger';
-import { getPathFromUri } from './utils';
+import { getPathFromStr, getPathFromUri, samePath } from './utils';
 
 const FILE_CHANGE_REGEX = /(^\.git\/(config|index|HEAD|refs\/stash|refs\/heads\/.*|refs\/remotes\/.*|refs\/tags\/.*)$)|(^(?!\.git).*$)|(^\.git[^\/]+$)/;
-
-const IS_WINDOWS = process.platform === 'win32';
 
 /**
  * Minimal type definitions for the VS Code built-in Git extension API
@@ -37,10 +35,7 @@ interface GitExtension {
  * Graph. Normalises separators and handles drive-letter case on Windows.
  */
 function sameRepoPath(uri: vscode.Uri, repoPath: string): boolean {
-	const a = path.normalize(getPathFromUri(uri));
-	const b = path.normalize(repoPath);
-	if (IS_WINDOWS) return a.toLowerCase() === b.toLowerCase();
-	return a === b;
+	return samePath(getPathFromUri(uri), repoPath);
 }
 
 /**
@@ -133,6 +128,8 @@ export class RepoFileWatcher {
 	private readonly repoChangeCallback: () => void;
 	private repo: string | null = null;
 	private fsWatcher: vscode.FileSystemWatcher | null = null;
+	private worktreesWatcher: vscode.FileSystemWatcher | null = null;
+	private gitDirWatcher: vscode.FileSystemWatcher | null = null;
 	private gitDisposable: vscode.Disposable | null = null;
 	private refreshTimeout: NodeJS.Timeout | null = null;
 	private muted: boolean = false;
@@ -150,9 +147,22 @@ export class RepoFileWatcher {
 
 	/**
 	 * Start watching a repository for file events and git state changes.
+	 *
+	 * In addition to the working-tree watcher (`repo/**`) and the built-in Git
+	 * extension subscription, two optional worktree-aware watchers may be set up:
+	 *
+	 * - `gitCommonDir`: watches `<common-dir>/worktrees/*` for the creation /
+	 *   deletion of linked worktree entries (refreshing the worktree list).
+	 * - `gitDir`: watches the current worktree's own `<git-dir>/(HEAD|index)`
+	 *   for HEAD/index changes — needed because a linked worktree's real
+	 *   HEAD/index live under `<common-dir>/worktrees/<name>/`, outside the
+	 *   `repo/**` glob.
+	 *
 	 * @param repo The path of the repository to watch.
+	 * @param gitCommonDir The absolute git common dir (from `git rev-parse --git-common-dir`), or undefined to skip the worktree-list watcher.
+	 * @param gitDir The absolute git dir of the current worktree (from `git rev-parse --git-dir`), or undefined to skip the git-dir watcher.
 	 */
-	public start(repo: string) {
+	public start(repo: string, gitCommonDir?: string, gitDir?: string) {
 		if (this.fsWatcher !== null) {
 			// If there is an existing File System Watcher, stop it
 			this.stop();
@@ -165,6 +175,24 @@ export class RepoFileWatcher {
 		this.fsWatcher.onDidChange(uri => this.refresh(uri));
 		this.fsWatcher.onDidDelete(uri => this.refresh(uri));
 		this.logger.log('Started watching repo: ' + repo);
+
+		if (gitCommonDir) {
+			// Watch the worktrees subdirectory for linked worktree creation/deletion.
+			// FileSystemWatcher globs only accept forward slashes, so normalise the
+			// joined path (path.join yields backslashes on Windows).
+			const worktreesGlob = getPathFromStr(path.join(gitCommonDir, 'worktrees')) + '/*';
+			this.worktreesWatcher = vscode.workspace.createFileSystemWatcher(worktreesGlob, false, true, false);
+			this.worktreesWatcher.onDidCreate(() => this.notifyChange());
+			this.worktreesWatcher.onDidDelete(() => this.notifyChange());
+		}
+
+		if (gitDir) {
+			// Watch the current worktree's own HEAD/index for changes.
+			this.gitDirWatcher = vscode.workspace.createFileSystemWatcher(getPathFromStr(gitDir) + '/(HEAD|index)', false, false, false);
+			this.gitDirWatcher.onDidCreate(() => this.notifyChange());
+			this.gitDirWatcher.onDidChange(() => this.notifyChange());
+			this.gitDirWatcher.onDidDelete(() => this.notifyChange());
+		}
 
 		// Also subscribe to the built-in Git extension's state change events
 		this.gitDisposable = watchGitRepo(repo, () => this.notifyChange());
@@ -179,6 +207,14 @@ export class RepoFileWatcher {
 			this.fsWatcher.dispose();
 			this.fsWatcher = null;
 			this.logger.log('Stopped watching repo: ' + this.repo);
+		}
+		if (this.worktreesWatcher !== null) {
+			this.worktreesWatcher.dispose();
+			this.worktreesWatcher = null;
+		}
+		if (this.gitDirWatcher !== null) {
+			this.gitDirWatcher.dispose();
+			this.gitDirWatcher = null;
 		}
 		if (this.refreshTimeout !== null) {
 			// If a timeout is active, clear it

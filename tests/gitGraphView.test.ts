@@ -2413,7 +2413,7 @@ describe('GitGraphView', () => {
 					expect(spyOnGetRepoInfo).toHaveBeenCalledWith('/path/to/repo', true, false, ['upstream']);
 					expect(spyOnRepoRoot).not.toHaveBeenCalled();
 					expect(spyOnSetLastActiveRepo).toHaveBeenCalledWith('/path/to/repo');
-					expect(spyOnRepoFileWatcherStart).toHaveBeenCalledWith('/path/to/repo');
+					expect(spyOnRepoFileWatcherStart).toHaveBeenCalledWith('/path/to/repo', undefined, undefined);
 					expect(messages).toStrictEqual([
 						{
 							command: 'loadRepoInfo',

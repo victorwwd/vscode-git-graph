@@ -884,7 +884,7 @@ body.tagLabelsRightAligned .gitRef.tag{
 	left:0;
 	right:0;
 	top:0;
-	padding:4px 132px 4px 0;
+	padding:4px 162px 4px 0;
 	background-color: var(--vscode-editor-background);
 	border-bottom:1px solid rgba(128,128,128,0.5);
 	line-height:32px;
@@ -922,7 +922,7 @@ body.tagLabelsRightAligned .gitRef.tag{
 	max-width:40vw;
 }
 
-#currentBtn, #findBtn, #terminalBtn, #settingsBtn, #fetchBtn, #refreshBtn{
+#currentBtn, #findBtn, #terminalBtn, #settingsBtn, #worktreesBtn, #fetchBtn, #refreshBtn{
 	position:absolute;
 	top:50%;
 	width:20px;
@@ -944,6 +944,9 @@ body.tagLabelsRightAligned .gitRef.tag{
 #settingsBtn{
 	right:40px;
 }
+#worktreesBtn{
+	right:160px;
+}
 #fetchBtn{
 	display:none;
 	right:40px;
@@ -954,7 +957,7 @@ body.tagLabelsRightAligned .gitRef.tag{
 #refreshBtn.refreshing{
 	cursor:default;
 }
-#currentBtn svg, #findBtn svg, #terminalBtn svg, #settingsBtn svg, #fetchBtn svg, #refreshBtn svg{
+#currentBtn svg, #findBtn svg, #terminalBtn svg, #settingsBtn svg, #worktreesBtn svg, #fetchBtn svg, #refreshBtn svg{
 	position:absolute;
 	fill:var(--vscode-editor-foreground);
 	opacity:0.8;
@@ -965,14 +968,14 @@ body.tagLabelsRightAligned .gitRef.tag{
 #currentBtn svg, #findBtn svg, #terminalBtn svg{
 	stroke-width:0.5px;
 }
-#currentBtn:hover svg, #findBtn:hover svg, #terminalBtn:hover svg, #settingsBtn:hover svg, #fetchBtn:hover svg, #refreshBtn:hover svg{
+#currentBtn:hover svg, #findBtn:hover svg, #terminalBtn:hover svg, #settingsBtn:hover svg, #worktreesBtn:hover svg, #fetchBtn:hover svg, #refreshBtn:hover svg{
 	opacity:1;
 	stroke-width:0.5px;
 }
 #currentBtn:hover svg, #findBtn:hover svg, #terminalBtn:hover svg{
 	stroke-width:1px;
 }
-#currentBtn svg, #findBtn svg, #terminalBtn svg, #settingsBtn svg, #fetchBtn svg{
+#currentBtn svg, #findBtn svg, #terminalBtn svg, #settingsBtn svg, #worktreesBtn svg, #fetchBtn svg{
 	left:1px;
 	top:1px;
 	width:18px !important;
@@ -993,7 +996,7 @@ body.tagLabelsRightAligned .gitRef.tag{
 }
 
 #controls.fetchSupported{
-	padding-right:180px;
+	padding-right:210px;
 }
 #controls.fetchSupported #currentBtn{
 	right:160px;
@@ -1006,6 +1009,9 @@ body.tagLabelsRightAligned .gitRef.tag{
 }
 #controls.fetchSupported #settingsBtn{
 	right:70px;
+}
+#controls.fetchSupported #worktreesBtn{
+	right:190px;
 }
 #controls.fetchSupported #fetchBtn{
 	display:block;

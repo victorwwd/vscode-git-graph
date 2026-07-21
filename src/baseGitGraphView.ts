@@ -9,7 +9,7 @@ import { RebaseSession } from './rebaseSession';
 import { RepoFileWatcher } from './repoFileWatcher';
 import { RepoManager } from './repoManager';
 import { ErrorInfo, GitConfigLocation, GitGraphViewInitialState, GitPushBranchMode, GitRepoSet, LoadGitGraphViewTo, RebaseLiveStatus, RequestCommitMessages, RequestDropCommits, RequestMessage, RequestSquashCommits, ResponseMessage } from './types';
-import { UNABLE_TO_FIND_GIT_MSG, UNCOMMITTED, applyPatch, archive, copyFilePathToClipboard, copyFilePathsToClipboard, copyToClipboard, createPullRequest, generatePatch, getNonce, openExtensionSettings, openExternalUrl, openFile, showErrorMessage, viewDiff, viewDiffWithWorkingFile, viewFileAtRevision, viewMultiFileDiff, viewScm } from './utils';
+import { UNABLE_TO_FIND_GIT_MSG, UNCOMMITTED, applyPatch, archive, copyFilePathToClipboard, copyFilePathsToClipboard, copyToClipboard, createPullRequest, generatePatch, getNonce, openExtensionSettings, openExternalUrl, openFile, openFolder, showErrorMessage, viewDiff, viewDiffWithWorkingFile, viewFileAtRevision, viewMultiFileDiff, viewScm } from './utils';
 import { Disposable, toDisposable } from './utils/disposable';
 
 /**
@@ -187,6 +187,14 @@ export abstract class BaseGitGraphView extends Disposable {
 				this.sendMessage({
 					command: 'addRemote',
 					error: await this.dataSource.addRemote(msg.repo, msg.name, msg.url, msg.pushUrl, msg.fetch)
+				});
+				break;
+			case 'addWorktree':
+				const addWorktreeResult = await this.dataSource.addWorktree(msg.repo, msg.options);
+				this.sendMessage({
+					command: 'addWorktree',
+					error: addWorktreeResult.error,
+					conflictWorktreePath: addWorktreeResult.conflictWorktreePath
 				});
 				break;
 			case 'addTag':
@@ -523,7 +531,14 @@ export abstract class BaseGitGraphView extends Disposable {
 				if (msg.repo !== this.currentRepo) {
 					this.currentRepo = msg.repo;
 					this.extensionState.setLastActiveRepo(msg.repo);
-					this.repoFileWatcher.start(msg.repo);
+					// Resolve the git common dir and the current worktree's own git dir so the
+					// watcher can observe linked-worktree creation/deletion and HEAD/index changes
+					// that fall outside the repo/** glob. Failures (e.g. old Git) fall back to undefined.
+					const [gitCommonDir, gitDir] = await Promise.all([
+						this.dataSource.getGitCommonDirPath(msg.repo),
+						this.dataSource.getGitDirPath(msg.repo)
+					]);
+					this.repoFileWatcher.start(msg.repo, gitCommonDir ?? undefined, gitDir ?? undefined);
 				}
 				break;
 			case 'loadRepos':
@@ -531,6 +546,20 @@ export abstract class BaseGitGraphView extends Disposable {
 					// If not required to check repos, or no changes were found when checking, respond with repos
 					this.respondLoadRepos(this.repoManager.getRepos(), null);
 				}
+				break;
+			case 'loadWorktrees':
+				const worktrees = await this.dataSource.getWorktrees(msg.repo);
+				this.sendMessage({
+					command: 'loadWorktrees',
+					worktrees: worktrees.worktrees,
+					error: worktrees.error
+				});
+				break;
+			case 'lockWorktree':
+				this.sendMessage({
+					command: 'lockWorktree',
+					error: await this.dataSource.lockWorktree(msg.repo, msg.worktreePath, msg.reason)
+				});
 				break;
 			case 'merge':
 				this.sendMessage({
@@ -569,6 +598,12 @@ export abstract class BaseGitGraphView extends Disposable {
 					error: await this.dataSource.openGitTerminal(msg.repo, null, msg.name)
 				});
 				break;
+			case 'openWorktreeInNewWindow':
+				this.sendMessage({
+					command: 'openWorktreeInNewWindow',
+					error: await openFolder(msg.worktreePath)
+				});
+				break;
 			case 'popStash':
 				this.sendMessage({
 					command: 'popStash',
@@ -579,6 +614,28 @@ export abstract class BaseGitGraphView extends Disposable {
 				this.sendMessage({
 					command: 'pruneRemote',
 					error: await this.dataSource.pruneRemote(msg.repo, msg.name)
+				});
+				break;
+			case 'pruneWorktrees':
+				const pruneResult = await this.dataSource.pruneWorktrees(msg.repo, msg.dryRun);
+				this.sendMessage({
+					command: 'pruneWorktrees',
+					preview: pruneResult.preview,
+					error: pruneResult.error
+				});
+				break;
+			case 'removeWorktree':
+				const removeResult = await this.dataSource.removeWorktree(msg.repo, msg.worktreePath, msg.force);
+				this.sendMessage({
+					command: 'removeWorktree',
+					error: removeResult.error,
+					conflictWorktreePath: removeResult.conflictWorktreePath
+				});
+				break;
+			case 'unlockWorktree':
+				this.sendMessage({
+					command: 'unlockWorktree',
+					error: await this.dataSource.unlockWorktree(msg.repo, msg.worktreePath)
 				});
 				break;
 			case 'pullBranch':
@@ -882,6 +939,7 @@ export abstract class BaseGitGraphView extends Disposable {
 					<span id="authorControl"><span class="unselectable">Authors: </span><div id="authorDropdown" class="dropdown"></div></span>
 					<label ${hideRemotes} id="showRemoteBranchesControl" title="Show Remote Branches"><input type="checkbox" id="showRemoteBranchesCheckbox" tabindex="-1"><span class="customCheckbox"></span>Remotes</label>
 					<label ${hideSimplify} id="simplifyByDecorationControl" title="Simplify By Decoration"><input type="checkbox" id="simplifyByDecorationCheckbox" tabindex="-1"><span class="customCheckbox"></span>Simplify</label>
+					<div id="worktreesBtn" title="Git Worktrees"></div>
 					<div id="currentBtn" title="Current"></div>
 					<div id="findBtn" title="Find"></div>
 					<div id="terminalBtn" title="Open a Terminal for this Repository"></div>

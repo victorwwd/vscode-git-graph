@@ -6,8 +6,9 @@ import * as vscode from 'vscode';
 import { AskpassEnvironment, AskpassManager } from './askpass/askpassManager';
 import { getConfig } from './config';
 import { Logger } from './logger';
-import { ActionedUser, ApplyPatchOptions, CommitOrdering, DateType, DeepWriteable, ErrorInfo, ErrorInfoExtensionPrefix, GitCommit, GitCommitDetails, GitCommitStash, GitConfigLocation, GitFileChange, GitFileStatus, GitPushBranchMode, GitRepoConfig, GitRepoConfigBranches, GitResetMode, GitSignature, GitSignatureStatus, GitStash, GitTagDetails, MergeActionOn, RebaseActionOn, RebaseCandidate, SquashMessageFormat, TagSorting, TagType, Writeable } from './types';
+import { ActionedUser, ApplyPatchOptions, CommitOrdering, DateType, DeepWriteable, ErrorInfo, ErrorInfoExtensionPrefix, GitCommit, GitCommitDetails, GitCommitStash, GitConfigLocation, GitFileChange, GitFileStatus, GitPushBranchMode, GitRepoConfig, GitRepoConfigBranches, GitResetMode, GitSignature, GitSignatureStatus, GitStash, GitTagDetails, GitWorktree, MergeActionOn, RebaseActionOn, RebaseCandidate, SquashMessageFormat, TagSorting, TagType, WorktreeAddOptions, Writeable } from './types';
 import { GitExecutable, GitVersionRequirement, UNABLE_TO_FIND_GIT_MSG, UNCOMMITTED, abbrevCommit, constructIncompatibleGitVersionMessage, doesVersionMeetRequirement, getPathFromStr, getPathFromUri, openGitTerminal, pathWithTrailingSlash, realpath, resolveSpawnOutput, showErrorMessage } from './utils';
+import { WORKTREE_PATH_EXISTS_MSG, isCurrentWorkspaceWorktree, parsePruneDryRunOutput, parseWorktreePorcelain, translateWorktreeError } from './worktreeUtils';
 import { Disposable } from './utils/disposable';
 import { Event } from './utils/event';
 
@@ -669,6 +670,174 @@ export class DataSource extends Disposable {
 				}
 			}
 		}).catch(() => null); // null => path is not in a repo
+	}
+
+
+	/* Worktree Methods */
+
+	/**
+	 * Get the absolute git common dir for a repository (`git rev-parse --git-common-dir`).
+	 * For a linked worktree this resolves to the shared object database of the main repository.
+	 * @param repo The path of the repository.
+	 * @returns The normalised common dir path (forward slashes), or null on failure.
+	 */
+	public getGitCommonDirPath(repo: string): Promise<string | null> {
+		return this.spawnGit(['rev-parse', '--git-common-dir'], repo, (stdout) => {
+			const dir = stdout.trim();
+			return getPathFromStr(path.isAbsolute(dir) ? dir : path.join(repo, dir));
+		}).catch(() => null);
+	}
+
+	/**
+	 * Get the absolute git dir of the current worktree (`git rev-parse --git-dir`).
+	 * For a linked worktree this resolves to `<common-dir>/worktrees/<name>`, which is
+	 * where its own HEAD/index physically live.
+	 * @param repo The path of the repository.
+	 * @returns The normalised git dir path (forward slashes), or null on failure.
+	 */
+	public getGitDirPath(repo: string): Promise<string | null> {
+		return this.spawnGit(['rev-parse', '--git-dir'], repo, (stdout) => {
+			const dir = stdout.trim();
+			return getPathFromStr(path.isAbsolute(dir) ? dir : path.join(repo, dir));
+		}).catch(() => null);
+	}
+
+	/**
+	 * List all worktrees of a repository.
+	 * @param repo The path of the repository.
+	 * @returns The parsed worktrees and an ErrorInfo.
+	 */
+	public getWorktrees(repo: string): Promise<{ worktrees: GitWorktree[], error: ErrorInfo }> {
+		if (this.gitExecutable !== null && !doesVersionMeetRequirement(this.gitExecutable.version, GitVersionRequirement.Worktree)) {
+			return Promise.resolve({ worktrees: [], error: constructIncompatibleGitVersionMessage(this.gitExecutable, GitVersionRequirement.Worktree, 'Git Worktree') });
+		}
+		return this.spawnGit(['worktree', 'list', '--porcelain'], repo, (stdout) => {
+			return { worktrees: parseWorktreePorcelain(stdout).map((wt) => ({ ...wt, isCurrent: isCurrentWorkspaceWorktree(wt.path) })), error: null };
+		}).catch((errorMessage: string) => ({ worktrees: [], error: errorMessage }));
+	}
+
+	/**
+	 * Add a new worktree.
+	 *
+	 * Note: `git worktree add` writes progress ("Preparing worktree ...") to stderr even
+	 * on success, so the result is judged by exit code rather than stderr emptiness. The
+	 * raw stderr is retained on failure so a conflicting worktree path can be extracted.
+	 *
+	 * A proactive `fs.existsSync` pre-check on the target path short-circuits the
+	 * "path already exists" case before git is ever spawned.
+	 * @param repo The path of the repository.
+	 * @param options The add options (path, ref, newBranch, force).
+	 * @returns The ErrorInfo and, when a branch is already checked out elsewhere, the conflict worktree path.
+	 */
+	public addWorktree(repo: string, options: WorktreeAddOptions): Promise<{ error: ErrorInfo, conflictWorktreePath: string | null }> {
+		return new Promise<{ error: ErrorInfo, conflictWorktreePath: string | null }>((resolve) => {
+			if (this.gitExecutable === null) return resolve({ error: UNABLE_TO_FIND_GIT_MSG, conflictWorktreePath: null });
+
+			// Proactive pre-check: fail fast with a friendly message if the target path
+			// already exists, instead of spawning git and parsing its stderr afterwards.
+			// Resolve relative paths against `repo` to match git's own cwd (the spawn
+			// below uses `cwd: repo`), otherwise the check would judge the wrong directory.
+			if (fs.existsSync(path.resolve(repo, options.path))) {
+				return resolve({ error: WORKTREE_PATH_EXISTS_MSG, conflictWorktreePath: null });
+			}
+
+			const args = ['worktree', 'add'];
+		if (options.force) args.push('--force');
+		if (options.mode === 'detached') {
+			args.push('--detach');
+		} else {
+			// mode === 'branch': branchName is guaranteed non-null by frontend validation
+			args.push('-b', options.branchName!);
+		}
+		args.push('--', options.path);
+		if (options.base !== null) args.push(options.base);
+
+		resolveSpawnOutput(cp.spawn(this.gitExecutable.path, args, { cwd: repo, env: Object.assign({}, process.env, this.askpassEnv) })).then((values) => {
+			const status = values[0], stderr = values[2];
+			if (status.code === 0) {
+				resolve({ error: null, conflictWorktreePath: null });
+			} else {
+				const translated = translateWorktreeError(stderr);
+				resolve({ error: translated.message, conflictWorktreePath: translated.conflictWorktreePath });
+			}
+		});
+		this.logger.logCmd('git', args);
+		});
+	}
+
+	/**
+	 * Remove a worktree.
+	 * @param repo The path of the repository.
+	 * @param worktreePath The path of the worktree to remove.
+	 * @param force Whether to force removal (discard uncommitted changes).
+	 * @returns The ErrorInfo and, when applicable, the conflict worktree path.
+	 */
+	public removeWorktree(repo: string, worktreePath: string, force: boolean): Promise<{ error: ErrorInfo, conflictWorktreePath: string | null }> {
+		return new Promise<{ error: ErrorInfo, conflictWorktreePath: string | null }>((resolve) => {
+			if (this.gitExecutable === null) return resolve({ error: UNABLE_TO_FIND_GIT_MSG, conflictWorktreePath: null });
+
+			const args = ['worktree', 'remove'];
+			if (force) args.push('--force');
+			args.push('--', worktreePath);
+
+			resolveSpawnOutput(cp.spawn(this.gitExecutable.path, args, { cwd: repo, env: Object.assign({}, process.env, this.askpassEnv) })).then((values) => {
+				const status = values[0], stderr = values[2];
+				if (status.code === 0) {
+					resolve({ error: null, conflictWorktreePath: null });
+				} else {
+					const translated = translateWorktreeError(stderr);
+					resolve({ error: translated.message, conflictWorktreePath: translated.conflictWorktreePath });
+				}
+			});
+			this.logger.logCmd('git', args);
+		});
+	}
+
+	/**
+	 * Lock a worktree, preventing it from being pruned (e.g. on a network/removable drive).
+	 * @param repo The path of the repository.
+	 * @param worktreePath The path of the worktree to lock.
+	 * @param reason An optional human-readable reason for the lock.
+	 * @returns The ErrorInfo from the executed command.
+	 */
+	public lockWorktree(repo: string, worktreePath: string, reason: string | null): Promise<ErrorInfo> {
+		if (this.gitExecutable !== null && !doesVersionMeetRequirement(this.gitExecutable.version, GitVersionRequirement.WorktreeMoveLock)) {
+			return Promise.resolve(constructIncompatibleGitVersionMessage(this.gitExecutable, GitVersionRequirement.WorktreeMoveLock, 'locking Worktrees'));
+		}
+		const args = ['worktree', 'lock'];
+		if (reason !== null) args.push('--reason', reason);
+		args.push('--', worktreePath);
+		return this.runGitCommand(args, repo);
+	}
+
+	/**
+	 * Unlock a previously locked worktree.
+	 * @param repo The path of the repository.
+	 * @param worktreePath The path of the worktree to unlock.
+	 * @returns The ErrorInfo from the executed command.
+	 */
+	public unlockWorktree(repo: string, worktreePath: string): Promise<ErrorInfo> {
+		if (this.gitExecutable !== null && !doesVersionMeetRequirement(this.gitExecutable.version, GitVersionRequirement.WorktreeMoveLock)) {
+			return Promise.resolve(constructIncompatibleGitVersionMessage(this.gitExecutable, GitVersionRequirement.WorktreeMoveLock, 'unlocking Worktrees'));
+		}
+		return this.runGitCommand(['worktree', 'unlock', '--', worktreePath], repo);
+	}
+
+	/**
+	 * Prune stale worktree entries.
+	 * @param repo The path of the repository.
+	 * @param dryRun If true, only preview the entries that would be pruned without removing them.
+	 * @returns The preview list (dryRun only) and an ErrorInfo.
+	 */
+	public pruneWorktrees(repo: string, dryRun: boolean): Promise<{ preview: string[] | null, error: ErrorInfo }> {
+		const args = ['worktree', 'prune', '-v'];
+		if (dryRun) args.push('--dry-run');
+		// `git worktree prune -v` writes its "Removing ..." lines to stderr (not stdout),
+		// so both streams are parsed. ignoreExitCode=true keeps the promise resolving so the
+		// stderr content is available even though Git exits non-zero on some versions.
+		return this._spawnGit(args, repo, (stdout, stderr) => {
+			return { preview: dryRun ? parsePruneDryRunOutput(stdout + '\n' + stderr) : null, error: null };
+		}, true).catch((errorMessage: string) => ({ preview: null, error: errorMessage }));
 	}
 
 

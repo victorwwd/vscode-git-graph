@@ -1,0 +1,202 @@
+/* Worktree Widget — mirrors #settingsWidget layout (see settingsWidget.css). */
+
+#worktreeWidget {
+	display: flex;
+	flex-direction: column;
+	position: fixed;
+	top: -400px;            /* off-screen by default */
+	right: 28px;
+	width: 460px;
+	max-height: 90vh;
+	padding: 0 10px 4px 10px;
+	z-index: 31;
+	background-color: var(--vscode-editorWidget-background);
+	box-shadow: 0 2px 8px var(--vscode-widget-shadow);
+	color: var(--vscode-editorSuggestWidget-foreground);
+	fill: var(--vscode-editorSuggestWidget-foreground);
+	user-select: none;
+	transition: top .2s linear;
+}
+#worktreeWidget.transition { transition: top .2s linear; }
+#worktreeWidget.active { top: 0; }
+#worktreeWidget.loading #worktreeLoading { display: block; }
+
+#worktreeHeader {
+	position: relative;
+	flex-shrink: 0;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+#worktreeHeader h2 {
+	margin: 8px 10px;
+	font-size: 16px;
+	line-height: 24px;
+	text-align: center;
+	font-weight: 400;
+}
+#worktreeClose {
+	position: absolute;
+	right: 0;
+	top: 8px;
+	cursor: pointer;
+	opacity: 0.7;
+	width: 16px;
+	height: 16px;
+}
+#worktreeClose:hover { opacity: 1; }
+
+#worktreeScrollWrap {
+	flex: 1 1 auto;
+	overflow-x: hidden;
+	overflow-y: auto;
+	min-height: 0;
+}
+
+#worktreeLoading {
+	display: none;
+	position: absolute;
+	left: 0;
+	right: 0;
+	top: 40px;
+	bottom: 50px;
+	background-color: rgba(0, 0, 0, 0.4);
+}
+#worktreeLoading > span {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	height: 100%;
+	font-style: italic;
+}
+#worktreeLoading > span > svg {
+	width: 24px;
+	height: 24px;
+	margin-right: 6px;
+	animation: spin 1s linear infinite;
+}
+
+.worktreeRow {
+	display: grid;
+	grid-template-columns: 1fr auto;
+	gap: 4px 8px;
+	align-items: center;
+	padding: 8px 6px;
+	position: relative;
+	border-radius: 3px;
+}
+.worktreeRow + .worktreeRow { border-top: 1px solid rgba(128, 128, 128, 0.15); }
+.worktreeRow:hover { background-color: rgba(128, 128, 128, 0.1); }
+
+.worktreeRow.isMain { background-color: rgba(128, 128, 128, 0.07); }
+.worktreeRow.isCurrent { box-shadow: inset 2px 0 0 var(--vscode-focusBorder); }
+.worktreeRow.isPrunable { opacity: 0.75; }
+
+.wt-main { min-width: 0; }
+.wt-path {
+	font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+	font-size: 12px;
+	color: var(--vscode-editor-foreground);
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+.wt-meta {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	font-size: 12px;
+	color: var(--vscode-descriptionForeground);
+	min-width: 0;
+	margin-top: 2px;
+}
+.wt-branch {
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+	border: 1px solid rgba(128, 128, 128, 0.6);
+	border-radius: 5px;
+	padding: 0 6px;
+	height: 18px;
+	white-space: nowrap;
+}
+.wt-branch svg { width: 8px; height: 12px; fill: var(--vscode-editorSuggestWidget-foreground); }
+.wt-detached { font-style: italic; opacity: 0.85; }
+
+.wt-badges { display: inline-flex; align-items: center; gap: 6px; }
+.wt-badge { display: inline-flex; cursor: help; }
+.wt-badge svg { width: 14px; height: 14px; display: block; }
+.wt-badge.locked svg { fill: var(--vscode-gitDecoration-modifiedResourceForeground); }
+.wt-badge.prunable svg { fill: var(--vscode-gitDecoration-deletedResourceForeground); }
+
+.wt-tag {
+	display: inline-flex;
+	align-items: center;
+	font-size: 11px;
+	padding: 0 6px;
+	height: 16px;
+	border-radius: 3px;
+	background: var(--vscode-button-background);
+	color: var(--vscode-button-foreground);
+}
+.wt-tag.current { background: var(--vscode-focusBorder); }
+
+.wt-actions {
+	display: flex;
+	gap: 4px;
+	opacity: 0.55;
+}
+.worktreeRow:hover .wt-actions { opacity: 1; }
+.wt-actionBtn {
+	width: 22px;
+	height: 22px;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	cursor: pointer;
+	border-radius: 3px;
+}
+.wt-actionBtn:hover { background: rgba(128, 128, 128, 0.25); }
+.wt-actionBtn svg { width: 14px; height: 14px; fill: var(--vscode-editorSuggestWidget-foreground); }
+.wt-actionBtn.danger:hover svg { fill: var(--vscode-gitDecoration-deletedResourceForeground); }
+.wt-actionBtn.disabled { opacity: 0.35; cursor: not-allowed; pointer-events: none; }
+
+#worktreeFooter {
+	flex-shrink: 0;
+	display: flex;
+	gap: 8px;
+	padding: 10px 6px 6px 6px;
+	border-top: 1px solid rgba(128, 128, 128, 0.2);
+}
+.wt-footBtn {
+	flex: 1;
+	background: var(--vscode-button-background);
+	color: var(--vscode-button-foreground);
+	border: none;
+	padding: 6px 10px;
+	font-size: 13px;
+	cursor: pointer;
+	border-radius: 2px;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: 6px;
+}
+.wt-footBtn.secondary { background: transparent; color: var(--vscode-editor-foreground); border: 1px solid rgba(128, 128, 128, 0.4); }
+.wt-footBtn:hover { background: var(--vscode-button-hoverBackground); }
+.wt-footBtn.secondary:hover { background: rgba(128, 128, 128, 0.15); }
+.wt-footBtn svg { width: 14px; height: 14px; fill: currentColor; }
+
+.wt-empty {
+	padding: 24px 6px;
+	text-align: center;
+	opacity: 0.6;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 6px;
+}
+.wt-empty > svg { width: 24px; height: 24px; }
+.wt-emptySub { font-size: 12px; word-break: break-word; }
+
+@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }

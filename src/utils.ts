@@ -44,6 +44,19 @@ export function pathWithTrailingSlash(path: string) {
 }
 
 /**
+ * Check whether two normalised paths refer to the same location.
+ * On Windows the comparison is case-insensitive (the file system is case-insensitive).
+ * @param a The first path (already normalised to forward slashes).
+ * @param b The second path (already normalised to forward slashes).
+ * @returns TRUE => the paths are equivalent, FALSE => they are not.
+ */
+export function samePath(a: string, b: string) {
+	const na = path.normalize(a), nb = path.normalize(b);
+	if (process.platform === 'win32') return na.toLowerCase() === nb.toLowerCase();
+	return na === nb;
+}
+
+/**
  * Check whether a path is within the current Visual Studio Code Workspace.
  * @param path The path to check.
  * @returns TRUE => Path is in workspace, FALSE => Path isn't in workspace.
@@ -404,6 +417,18 @@ export function openExtensionSettings(): Thenable<ErrorInfo> {
 	return vscode.commands.executeCommand('workbench.action.openSettings', '@ext:hansu.git-graph-2').then(
 		() => null,
 		() => 'Visual Studio Code was unable to open the Git Graph Extension Settings.'
+	);
+}
+
+/**
+ * Open a folder in a new Visual Studio Code window.
+ * @param folderPath The absolute path of the folder to open.
+ * @returns A promise resolving to the ErrorInfo of the executed command.
+ */
+export function openFolder(folderPath: string): Thenable<ErrorInfo> {
+	return vscode.commands.executeCommand('vscode.openFolder', vscode.Uri.file(folderPath), true).then(
+		() => null,
+		() => 'Visual Studio Code was unable to open ' + folderPath + '.'
 	);
 }
 
@@ -889,7 +914,9 @@ export const enum GitVersionRequirement {
 	FetchAndPruneTags = '2.17.0',
 	GpgInfo = '2.4.0',
 	PushStash = '2.13.2',
-	TagDetails = '1.7.8'
+	TagDetails = '1.7.8',
+	Worktree = '2.5.0',
+	WorktreeMoveLock = '2.17.0'
 }
 
 export const enum VsCodeVersionRequirement {
