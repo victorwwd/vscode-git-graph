@@ -4767,7 +4767,16 @@ window.addEventListener('load', () => {
 
 			case 'rebaseStart':
 				if (msg.error !== null) {
-					dialog.showError('Interactive Rebase failed to start', msg.error, null, null);
+					// When the rebase actually started but a later step failed (pick/squash
+					// error, editor issue), the repo is still mid-rebase. Saying "failed to
+					// start" there is misleading — the user can Continue/Abort from the
+					// status bar. Only call it a start failure when the rebase is not running.
+					const inProgress = msg.status.state === GG.RebaseLiveStateKind.Running
+						|| msg.status.state === GG.RebaseLiveStateKind.Conflict
+						|| msg.status.state === GG.RebaseLiveStateKind.EditStopped;
+					const title = inProgress ? 'Interactive Rebase step failed' : 'Interactive Rebase failed to start';
+					const hint = inProgress ? '\n\nThe rebase is still in progress. Resolve the issue and click Continue, or click Abort to give up.' : '';
+					dialog.showError(title, msg.error + hint, null, null);
 				}
 				gitGraph.closeInteractiveRebasePanel();
 				gitGraph.applyRebaseLiveStatus(msg.status);

@@ -742,26 +742,26 @@ export class DataSource extends Disposable {
 			}
 
 			const args = ['worktree', 'add'];
-		if (options.force) args.push('--force');
-		if (options.mode === 'detached') {
-			args.push('--detach');
-		} else {
-			// mode === 'branch': branchName is guaranteed non-null by frontend validation
-			args.push('-b', options.branchName!);
-		}
-		args.push('--', options.path);
-		if (options.base !== null) args.push(options.base);
-
-		resolveSpawnOutput(cp.spawn(this.gitExecutable.path, args, { cwd: repo, env: Object.assign({}, process.env, this.askpassEnv) })).then((values) => {
-			const status = values[0], stderr = values[2];
-			if (status.code === 0) {
-				resolve({ error: null, conflictWorktreePath: null });
+			if (options.force) args.push('--force');
+			if (options.mode === 'detached') {
+				args.push('--detach');
 			} else {
-				const translated = translateWorktreeError(stderr);
-				resolve({ error: translated.message, conflictWorktreePath: translated.conflictWorktreePath });
+				// mode === 'branch': branchName is guaranteed non-null by frontend validation
+				args.push('-b', options.branchName!);
 			}
-		});
-		this.logger.logCmd('git', args);
+			args.push('--', options.path);
+			if (options.base !== null) args.push(options.base);
+
+			resolveSpawnOutput(cp.spawn(this.gitExecutable.path, args, { cwd: repo, env: Object.assign({}, process.env, this.askpassEnv) })).then((values) => {
+				const status = values[0], stderr = values[2];
+				if (status.code === 0) {
+					resolve({ error: null, conflictWorktreePath: null });
+				} else {
+					const translated = translateWorktreeError(stderr);
+					resolve({ error: translated.message, conflictWorktreePath: translated.conflictWorktreePath });
+				}
+			});
+			this.logger.logCmd('git', args);
 		});
 	}
 

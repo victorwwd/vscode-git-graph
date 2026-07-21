@@ -36,6 +36,7 @@ export class RebaseSession {
 	private readonly extensionPath: string;
 	private readonly logger: Logger;
 	private promptWatchers: { [repo: string]: fs.FSWatcher } = {};
+	private promptPollers: { [repo: string]: ReturnType<typeof setInterval> } = {};
 	private messageEditorPending: { [repo: string]: boolean } = {};
 	private promptNotifier: ((message: ResponseRebasePrompt) => void) | null = null;
 	private promptResolvers: { [promptId: string]: (response: { accepted: boolean; message: string }) => void } = {};
@@ -268,29 +269,44 @@ export class RebaseSession {
 
 	private startPromptWatcher(repo: string, session: RebaseSessionState): void {
 		const promptDir = path.join(session.tmpDir, 'prompt');
+		const checkForPrompt = () => {
+			if (this.messageEditorPending[repo]) return;
+			// response.txt present means we already answered; rebaseEditor hasn't
+			// consumed it yet. Skip to avoid re-entry until it cleans up.
+			const responsePath = path.join(promptDir, 'response.txt');
+			if (fs.existsSync(responsePath)) return;
+			const waitingPath = path.join(promptDir, 'waiting');
+			if (!fs.existsSync(waitingPath)) return;
+			const requestPath = path.join(promptDir, 'request.txt');
+			let msgPath = '';
+			try { msgPath = fs.readFileSync(requestPath, 'utf8').trim(); } catch (_) { return; }
+			if (msgPath) {
+				this.logger.log('[rebase] prompt: editor request received, msgPath=' + msgPath);
+				this.handleGitEditorPrompt(repo, session, msgPath);
+			}
+		};
+
 		try {
 			const watcher = fs.watch(promptDir, { persistent: false }, (eventType, filename) => {
-				if (filename !== 'waiting' || eventType !== 'rename') return;
-				const waitingPath = path.join(promptDir, 'waiting');
-				if (!fs.existsSync(waitingPath)) return;
-				const requestPath = path.join(promptDir, 'request.txt');
-				let msgPath = '';
-				try { msgPath = fs.readFileSync(requestPath, 'utf8').trim(); } catch (_) { /* request not yet flushed */ }
-				if (msgPath) {
-					this.logger.log('[rebase] prompt: editor request received, msgPath=' + msgPath);
-					this.handleGitEditorPrompt(repo, session, msgPath);
-				}
+				this.logger.log('[rebase] prompt: watcher event: eventType=' + eventType + ' filename=' + (filename || '(null)'));
+				checkForPrompt();
 			});
 			this.promptWatchers[repo] = watcher;
-		} catch (_) { /* tmpDir missing or unwatchable; prompt flow disabled for this session */ }
+		} catch (_) { /* tmpDir missing or unwatchable; polling fallback will still run */ }
+
+		// Polling fallback: fs.watch is known to miss events on some Windows/Node
+		// combinations. Unref'd so it doesn't keep the extension host alive.
+		const pollTimer = setInterval(checkForPrompt, 200);
+		pollTimer.unref();
+		this.promptPollers[repo] = pollTimer;
 	}
 
 	/**
 	 * Git is blocked waiting on a commit message via the rebase-editor helper.
 	 * Read the default contents, ask the webview via {@link promptForMessage}
 	 * for the user's choice, then write the response file to release git.
-	 * If the user cancels (or no webview is connected) we fall back to the
-	 * original message so git proceeds unchanged rather than hanging.
+	 * If the user cancels (or no webview is connected) rebaseEditor exits
+	 * non-zero so git aborts the rebase instead of proceeding.
 	 */
 	private async handleGitEditorPrompt(repo: string, session: RebaseSessionState, msgPath: string): Promise<void> {
 		this.messageEditorPending[repo] = true;
@@ -302,18 +318,23 @@ export class RebaseSession {
 		}
 
 		const { accepted, message } = await this.promptForMessage(repo, defaultMessage);
-		const content = accepted ? message : defaultMessage;
-		this.logger.log('[rebase] prompt: writing response (accepted=' + accepted + ', bytes=' + content.length + ')');
+		// response.txt is a JSON envelope so rebaseEditor can distinguish
+		// accept (write message, exit 0) from cancel (exit non-zero -> git aborts).
+		const response = JSON.stringify({ accepted, message: accepted ? message : '' });
+		this.logger.log('[rebase] prompt: writing response (accepted=' + accepted + ', bytes=' + response.length + ')');
 
+		// Atomic publish: write a sibling temp file then rename. fs.writeFileSync is not
+		// atomic on Windows, and rebaseEditor polls/watches this file — a partial write
+		// would make its JSON.parse throw and abort the rebase step mid-flight.
+		const promptDir = path.join(session.tmpDir, 'prompt');
+		const finalPath = path.join(promptDir, 'response.txt');
+		const tmpPath = path.join(promptDir, '.response.tmp.' + process.pid);
 		try {
-			fs.writeFileSync(msgPath, content);
-		} catch (err) {
-			this.logger.logError('[rebase] prompt: failed to write msgPath: ' + (err as Error).message);
-		}
-		try {
-			fs.writeFileSync(path.join(session.tmpDir, 'prompt', 'response.txt'), content);
+			fs.writeFileSync(tmpPath, response);
+			fs.renameSync(tmpPath, finalPath);
 		} catch (err) {
 			this.logger.logError('[rebase] prompt: failed to write response.txt: ' + (err as Error).message);
+			try { fs.unlinkSync(tmpPath); } catch (_) { /* temp already gone */ }
 		}
 		delete this.messageEditorPending[repo];
 	}
@@ -352,6 +373,11 @@ export class RebaseSession {
 			watcher.close();
 			delete this.promptWatchers[repo];
 		}
+		const poller = this.promptPollers[repo];
+		if (poller) {
+			clearInterval(poller);
+			delete this.promptPollers[repo];
+		}
 		delete this.messageEditorPending[repo];
 	}
 
@@ -387,14 +413,24 @@ export class RebaseSession {
 	}
 
 	private buildEnv(tmpDir: string): NodeJS.ProcessEnv {
-		const editor = path.join(this.extensionPath, 'out', 'rebaseEditor', 'main.js');
-		const planPath = path.join(tmpDir, 'plan.json');
-		const msgDir = path.join(tmpDir, 'msg');
-		const node = process.execPath;
-		return {
+		// Use forward slashes everywhere: git for Windows invokes GIT_EDITOR /
+		// GIT_SEQUENCE_EDITOR via `sh -c`, where backslashes in Windows paths are
+		// interpreted as escape characters and break command parsing, causing git
+		// to fall back to core.editor (typically VS Code's built-in git integration).
+		const toFwd = (p: string) => p.replace(/\\/g, '/');
+		const editor = toFwd(path.join(this.extensionPath, 'out', 'rebaseEditor', 'main.js'));
+		const planPath = toFwd(path.join(tmpDir, 'plan.json'));
+		const msgDir = toFwd(path.join(tmpDir, 'msg'));
+		const logPath = toFwd(path.join(tmpDir, 'editor.log'));
+		const node = toFwd(process.execPath);
+		const env = {
 			ELECTRON_RUN_AS_NODE: '1',
 			GIT_SEQUENCE_EDITOR: '"' + node + '" "' + editor + '" todo "' + planPath + '"',
-			GIT_EDITOR: '"' + node + '" "' + editor + '" msg "' + msgDir + '"'
+			GIT_EDITOR: '"' + node + '" "' + editor + '" msg "' + msgDir + '"',
+			REBASE_EDITOR_LOG: logPath
 		};
+		this.logger.log('[rebase] buildEnv: GIT_SEQUENCE_EDITOR=' + env.GIT_SEQUENCE_EDITOR);
+		this.logger.log('[rebase] buildEnv: GIT_EDITOR=' + env.GIT_EDITOR);
+		return env;
 	}
 }

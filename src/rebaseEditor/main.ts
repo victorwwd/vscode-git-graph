@@ -53,22 +53,40 @@ function runPrompt(msgDir: string, msgPath: string): number {
 	const deadline = Date.now() + TIMEOUT_MS;
 	while (Date.now() < deadline) {
 		if (fs.existsSync(responsePath)) {
-			let response: string;
+			// response.txt is a JSON envelope: { accepted: boolean, message: string }.
+			// accepted=true  -> write message to msgPath, exit 0 (git proceeds)
+			// accepted=false -> exit 1 (git aborts the rebase)
+			let raw: string;
 			try {
-				response = fs.readFileSync(responsePath, 'utf8');
-			} catch (err) {
-				process.stderr.write('rebaseEditor: failed to read prompt response: ' + (err as Error).message + '\n');
-				return 1;
+				raw = fs.readFileSync(responsePath, 'utf8');
+			} catch (_) {
+				// Transient I/O error (file locked mid-rename, antivirus, etc.). The host
+				// has already published the file atomically; just retry the read on the
+				// next poll without deleting anything, so the watcher doesn't see the
+				// response vanish and re-trigger the prompt.
+				Atomics.wait(i32, 0, 0, POLL_INTERVAL_MS);
+				continue;
 			}
+			let parsed: { accepted?: boolean; message?: string };
 			try {
-				fs.writeFileSync(msgPath, response);
+				parsed = JSON.parse(raw);
 			} catch (err) {
-				process.stderr.write('rebaseEditor: failed to write commit message: ' + (err as Error).message + '\n');
+				process.stderr.write('rebaseEditor: failed to parse prompt response: ' + (err as Error).message + '\n');
 				return 1;
 			}
 			try { fs.unlinkSync(responsePath); } catch (_) { /* best-effort cleanup */ }
 			try { fs.unlinkSync(requestPath); } catch (_) { /* best-effort cleanup */ }
 			try { fs.unlinkSync(waitingPath); } catch (_) { /* host may already have consumed */ }
+			if (!parsed.accepted) {
+				process.stderr.write('rebaseEditor: user cancelled commit message prompt\n');
+				return 1;
+			}
+			try {
+				fs.writeFileSync(msgPath, parsed.message || '');
+			} catch (err) {
+				process.stderr.write('rebaseEditor: failed to write commit message: ' + (err as Error).message + '\n');
+				return 1;
+			}
 			return 0;
 		}
 		Atomics.wait(i32, 0, 0, POLL_INTERVAL_MS);
@@ -78,6 +96,14 @@ function runPrompt(msgDir: string, msgPath: string): number {
 }
 
 export function main(argv: string[]): number {
+	// Diagnostic log: confirm git invoked the editor and capture argv.
+	try {
+		const logPath = process.env.REBASE_EDITOR_LOG;
+		if (logPath) {
+			fs.appendFileSync(logPath, '[' + new Date().toISOString() + '] main invoked: argv=' + JSON.stringify(argv) + '\n');
+		}
+	} catch (_) { /* best-effort */ }
+
 	const sub = argv[2];
 	const rest = argv.slice(3);
 	if (sub === 'todo' && rest.length === 2) return runTodo(rest[0], rest[1]);
