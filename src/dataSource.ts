@@ -734,11 +734,21 @@ export class DataSource extends Disposable {
 			if (this.gitExecutable === null) return resolve({ error: UNABLE_TO_FIND_GIT_MSG, conflictWorktreePath: null });
 
 			// Proactive pre-check: fail fast with a friendly message if the target path
-			// already exists, instead of spawning git and parsing its stderr afterwards.
-			// Resolve relative paths against `repo` to match git's own cwd (the spawn
-			// below uses `cwd: repo`), otherwise the check would judge the wrong directory.
-			if (fs.existsSync(path.resolve(repo, options.path))) {
-				return resolve({ error: WORKTREE_PATH_EXISTS_MSG, conflictWorktreePath: null });
+			// already exists as a non-empty directory (or a file), instead of spawning git
+			// and parsing its stderr afterwards. An existing EMPTY directory is allowed —
+			// `git worktree add` populates it. Resolve relative paths against `repo` to
+			// match git's own cwd (the spawn below uses `cwd: repo`).
+			const resolvedPath = path.resolve(repo, options.path);
+			if (fs.existsSync(resolvedPath)) {
+				let isEmptyDirectory = false;
+				try {
+					isEmptyDirectory = fs.statSync(resolvedPath).isDirectory() && fs.readdirSync(resolvedPath).length === 0;
+				} catch {
+					isEmptyDirectory = false;
+				}
+				if (!isEmptyDirectory) {
+					return resolve({ error: WORKTREE_PATH_EXISTS_MSG, conflictWorktreePath: null });
+				}
 			}
 
 			const args = ['worktree', 'add'];

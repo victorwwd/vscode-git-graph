@@ -886,7 +886,7 @@ class GitGraphView {
 		// Field indices (used for DOM wiring after the form renders):
 		// [0] Path, [1] Based on, [2] Checkout as (Radio), [3] Branch Name, [4] Force
 		const inputs: DialogInput[] = [
-			{ type: DialogInputType.Text, name: 'Worktree Path', default: '', placeholder: '/path/to/new-worktree' },
+			{ type: DialogInputType.TextWithBrowse, name: 'Worktree Path', default: '', placeholder: '/path/to/new-worktree' },
 			{ type: DialogInputType.Text, name: 'Based on (optional)', default: prefilledRef ?? '', placeholder: 'Defaults to current HEAD if empty' },
 			{ type: DialogInputType.Radio, name: 'Checkout as', default: defaultMode, options: [
 				{ name: 'New Branch', value: 'branch' },
@@ -920,7 +920,7 @@ class GitGraphView {
 				return 'Branch Name is required when creating a new branch.';
 			}
 			return null;
-		});
+		}, () => this.requestDirectory());
 
 		// Manual DOM wiring: show/hide the Branch Name row (index 3) based on the Checkout-as radio (index 2).
 		// The dialog framework renders fields statically, so toggling is done here after showForm.

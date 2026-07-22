@@ -93,7 +93,7 @@ export function parsePruneDryRunOutput(stdout: string): string[] {
  * the reactive translation of git's own `already exists` stderr, so the two code
  * paths can never diverge in wording.
  */
-export const WORKTREE_PATH_EXISTS_MSG = 'The target path already exists. Choose another location or clear the directory first.';
+export const WORKTREE_PATH_EXISTS_MSG = 'The target path already exists and is not empty. Choose another location or clear the directory first.';
 
 /**
  * The result of translating a raw Git worktree stderr into a user-facing message.
