@@ -766,6 +766,39 @@ export class DataSource extends Disposable {
 	}
 
 	/**
+	 * Move (rename) a worktree to a new path.
+	 * @param repo The path of the repository.
+	 * @param worktreePath The current path of the worktree.
+	 * @param newPath The target path to move the worktree to.
+	 * @returns The ErrorInfo and, when applicable, the conflict worktree path.
+	 */
+	public moveWorktree(repo: string, worktreePath: string, newPath: string): Promise<{ error: ErrorInfo, conflictWorktreePath: string | null }> {
+		return new Promise<{ error: ErrorInfo, conflictWorktreePath: string | null }>((resolve) => {
+			if (this.gitExecutable === null) return resolve({ error: UNABLE_TO_FIND_GIT_MSG, conflictWorktreePath: null });
+			if (!doesVersionMeetRequirement(this.gitExecutable.version, GitVersionRequirement.WorktreeMoveLock)) {
+				return resolve({ error: constructIncompatibleGitVersionMessage(this.gitExecutable, GitVersionRequirement.WorktreeMoveLock, 'moving Worktrees'), conflictWorktreePath: null });
+			}
+
+			// No proactive path-exists pre-check here: the path is typically chosen via the native
+			// directory dialog (which can only select existing folders), so existsSync would always
+			// be true and false-positive. Git itself rejects an existing target, and that error is
+			// translated into a friendly message below via translateWorktreeError.
+			const args = ['worktree', 'move', '--', worktreePath, newPath];
+
+			resolveSpawnOutput(cp.spawn(this.gitExecutable.path, args, { cwd: repo, env: Object.assign({}, process.env, this.askpassEnv) })).then((values) => {
+				const status = values[0], stderr = values[2];
+				if (status.code === 0) {
+					resolve({ error: null, conflictWorktreePath: null });
+				} else {
+					const translated = translateWorktreeError(stderr);
+					resolve({ error: translated.message, conflictWorktreePath: translated.conflictWorktreePath });
+				}
+			});
+			this.logger.logCmd('git', args);
+		});
+	}
+
+	/**
 	 * Remove a worktree.
 	 * @param repo The path of the repository.
 	 * @param worktreePath The path of the worktree to remove.

@@ -9,7 +9,7 @@ import { RebaseSession } from './rebaseSession';
 import { RepoFileWatcher } from './repoFileWatcher';
 import { RepoManager } from './repoManager';
 import { ErrorInfo, GitConfigLocation, GitGraphViewInitialState, GitPushBranchMode, GitRepoSet, LoadGitGraphViewTo, RebaseLiveStatus, RequestCommitMessages, RequestDropCommits, RequestMessage, RequestSquashCommits, ResponseMessage } from './types';
-import { UNABLE_TO_FIND_GIT_MSG, UNCOMMITTED, applyPatch, archive, copyFilePathToClipboard, copyFilePathsToClipboard, copyToClipboard, createPullRequest, generatePatch, getNonce, openExtensionSettings, openExternalUrl, openFile, openFolder, showErrorMessage, viewDiff, viewDiffWithWorkingFile, viewFileAtRevision, viewMultiFileDiff, viewScm } from './utils';
+import { UNABLE_TO_FIND_GIT_MSG, UNCOMMITTED, applyPatch, archive, copyFilePathToClipboard, copyFilePathsToClipboard, copyToClipboard, createPullRequest, generatePatch, getNonce, getPathFromUri, openExtensionSettings, openExternalUrl, openFile, openFolder, showErrorMessage, viewDiff, viewDiffWithWorkingFile, viewFileAtRevision, viewMultiFileDiff, viewScm } from './utils';
 import { Disposable, toDisposable } from './utils/disposable';
 
 /**
@@ -561,6 +561,14 @@ export abstract class BaseGitGraphView extends Disposable {
 					error: await this.dataSource.lockWorktree(msg.repo, msg.worktreePath, msg.reason)
 				});
 				break;
+			case 'moveWorktree':
+				const moveResult = await this.dataSource.moveWorktree(msg.repo, msg.worktreePath, msg.newPath);
+				this.sendMessage({
+					command: 'moveWorktree',
+					error: moveResult.error,
+					conflictWorktreePath: moveResult.conflictWorktreePath
+				});
+				break;
 			case 'merge':
 				this.sendMessage({
 					command: 'merge',
@@ -631,6 +639,18 @@ export abstract class BaseGitGraphView extends Disposable {
 					error: removeResult.error,
 					conflictWorktreePath: removeResult.conflictWorktreePath
 				});
+				break;
+			case 'selectDirectory':
+				try {
+					const uris = await vscode.window.showOpenDialog({ canSelectFiles: false, canSelectFolders: true, canSelectMany: false });
+					this.sendMessage({
+						command: 'selectDirectory',
+						requestId: msg.requestId,
+						path: uris && uris.length > 0 ? getPathFromUri(uris[0]) : null
+					});
+				} catch {
+					this.sendMessage({ command: 'selectDirectory', requestId: msg.requestId, path: null });
+				}
 				break;
 			case 'unlockWorktree':
 				this.sendMessage({

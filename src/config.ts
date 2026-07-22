@@ -96,7 +96,7 @@ class Config {
 			stash: { apply: true, createBranch: true, pop: true, drop: true, copyName: true, copyHash: true },
 			tag: { viewDetails: true, delete: true, push: true, createArchive: true, copyName: true },
 			uncommittedChanges: { stash: true, reset: true, clean: true, openSourceControlView: true },
-			worktree: { open: true, remove: true, lock: true, unlock: true, copyPath: true }
+			worktree: { open: true, remove: true, rename: true, lock: true, unlock: true, copyPath: true }
 		};
 		mergeConfigObjects(config, userConfig);
 		return config;

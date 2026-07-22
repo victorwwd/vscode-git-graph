@@ -379,6 +379,7 @@ describe('Config', () => {
 				worktree: {
 					open: true,
 					remove: true,
+					rename: true,
 					lock: true,
 					unlock: true,
 					copyPath: true
@@ -478,6 +479,7 @@ describe('Config', () => {
 				worktree: {
 					open: true,
 					remove: true,
+					rename: true,
 					lock: true,
 					unlock: true,
 					copyPath: true
@@ -595,6 +597,7 @@ describe('Config', () => {
 				worktree: {
 					open: true,
 					remove: true,
+					rename: true,
 					lock: true,
 					unlock: true,
 					copyPath: true

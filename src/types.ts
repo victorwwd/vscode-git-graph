@@ -459,6 +459,7 @@ export interface ContextMenuActionsVisibility {
 	readonly worktree: {
 		readonly open: boolean;
 		readonly remove: boolean;
+		readonly rename: boolean;
 		readonly lock: boolean;
 		readonly unlock: boolean;
 		readonly copyPath: boolean;
@@ -1260,6 +1261,27 @@ export interface ResponseOpenWorktreeInNewWindow extends ResponseWithErrorInfo {
 	readonly command: 'openWorktreeInNewWindow';
 }
 
+export interface RequestMoveWorktree extends RepoRequest {
+	readonly command: 'moveWorktree';
+	readonly worktreePath: string;
+	readonly newPath: string;
+}
+export interface ResponseMoveWorktree extends ResponseWithErrorInfo {
+	readonly command: 'moveWorktree';
+	readonly conflictWorktreePath: string | null;
+}
+
+export interface RequestSelectDirectory extends BaseMessage {
+	readonly command: 'selectDirectory';
+	readonly requestId: number;
+	readonly defaultUri: string | null;
+}
+export interface ResponseSelectDirectory extends BaseMessage {
+	readonly command: 'selectDirectory';
+	readonly requestId: number;
+	readonly path: string | null; // null => user cancelled or dialog failed
+}
+
 export interface RequestPullBranch extends RepoRequest {
 	readonly command: 'pullBranch';
 	readonly branchName: string;
@@ -1668,6 +1690,7 @@ export type RequestMessage =
 	| RequestLoadWorktrees
 	| RequestLockWorktree
 	| RequestMerge
+	| RequestMoveWorktree
 	| RequestOpenExtensionSettings
 	| RequestOpenExternalDirDiff
 	| RequestOpenExternalUrl
@@ -1699,6 +1722,7 @@ export type RequestMessage =
 	| RequestSquashCommits
 	| RequestSetWorkspaceViewState
 	| RequestShowErrorDialog
+	| RequestSelectDirectory
 	| RequestStartCodeReview
 	| RequestTagDetails
 	| RequestUpdateCodeReview
@@ -1754,6 +1778,7 @@ export type ResponseMessage =
 	| ResponseLoadWorktrees
 	| ResponseLockWorktree
 	| ResponseMerge
+	| ResponseMoveWorktree
 	| ResponseOpenExtensionSettings
 	| ResponseOpenExternalDirDiff
 	| ResponseOpenExternalUrl
@@ -1778,6 +1803,7 @@ export type ResponseMessage =
 	| ResponseRenameBranch
 	| ResponseResetFileToRevision
 	| ResponseResetToCommit
+	| ResponseSelectDirectory
 	| ResponseRevertCommit
 	| ResponseUndoLastCommit
 	| ResponseUnlockWorktree

@@ -18,6 +18,11 @@ class GitGraphView {
 	private currentTags: string[] | null = null;
 	private lastSelectedTag: string | null = null; // Last selected tag for positioning and highlighting
 
+	// Pending resolvers for `selectDirectory` requests, keyed by requestId. Each entry is
+	// resolved when the matching `selectDirectoryResult` response arrives from the backend.
+	private selectDirectoryNextId: number = 1;
+	private selectDirectoryResolvers: { [id: number]: (path: string | null) => void } = {};
+
 	private currentRepo!: string;
 	private currentRepoLoading: boolean = true;
 	private currentRepoRefreshState: {
@@ -755,6 +760,48 @@ class GitGraphView {
 	}
 
 	/**
+	 * Handle a moveWorktree response: on success reload the list, otherwise show the error.
+	 */
+	public processMoveWorktreeResponse(error: GG.ErrorInfo, conflictWorktreePath: string | null) {
+		dialog.closeActionRunning();
+		if (error === null) {
+			this.reloadWorktrees();
+		} else if (conflictWorktreePath !== null) {
+			dialog.showTwoButtons(
+				error + '<br>Open that worktree in a new window?',
+				'Open That Worktree', () => this.openWorktreeInNewWindow(conflictWorktreePath),
+				'Close', () => {},
+				null
+			);
+		} else {
+			dialog.showError('Unable to Move Worktree', error, null, null);
+		}
+	}
+
+	/**
+	 * Request the user to select a directory via the backend's native open dialog.
+	 * Resolves to the chosen path (forward-slash normalised), or null if cancelled.
+	 */
+	public requestDirectory(): Promise<string | null> {
+		const requestId = this.selectDirectoryNextId++;
+		return new Promise<string | null>((resolve) => {
+			this.selectDirectoryResolvers[requestId] = resolve;
+			sendMessage({ command: 'selectDirectory', requestId: requestId, defaultUri: null });
+		});
+	}
+
+	/**
+	 * Handle a selectDirectory response: resolve the pending request matching the id.
+	 */
+	public processSelectDirectoryResponse(requestId: number, path: string | null) {
+		const resolver = this.selectDirectoryResolvers[requestId];
+		if (resolver !== undefined) {
+			delete this.selectDirectoryResolvers[requestId];
+			resolver(path);
+		}
+	}
+
+	/**
 	 * Handle a lockWorktree response: on success reload the list, otherwise show the error.
 	 */
 	public processLockWorktreeResponse(error: GG.ErrorInfo) {
@@ -916,6 +963,33 @@ class GitGraphView {
 			dialog.showActionRunning('Removing Worktree');
 			sendMessage({ command: 'removeWorktree', repo: this.currentRepo, worktreePath: worktree.path, force: force });
 		}, null);
+	}
+
+	/**
+	 * Open the "Rename (Move) Worktree" dialog to collect a new path, then move the worktree.
+	 */
+	public renameWorktreeAction(worktree: GG.GitWorktree) {
+		if (worktree.isMain) {
+			dialog.showError('Cannot move the main worktree.', null, null, null);
+			return;
+		}
+		if (worktree.isPrunable) {
+			dialog.showError('Cannot move a prunable worktree (its working directory no longer exists).', null, null, null);
+			return;
+		}
+		const inputs: DialogInput[] = [
+			{ type: DialogInputType.TextWithBrowse, name: 'New Path', default: worktree.path, placeholder: '/path/to/moved-worktree' }
+		];
+		dialog.showForm('Move Worktree<br><b>' + escapeHtml(worktree.path) + '</b>', inputs, 'Move', (values) => {
+			const newPath = (<string>values[0]).trim();
+			dialog.showActionRunning('Moving Worktree');
+			sendMessage({ command: 'moveWorktree', repo: this.currentRepo, worktreePath: worktree.path, newPath: newPath });
+		}, null, 'Cancel', null, true, (values) => {
+			const newPath = (<string>values[0]).trim();
+			if (!newPath) return 'New Path cannot be empty.';
+			if (newPath === worktree.path) return 'New Path must differ from the current path.';
+			return null;
+		}, () => this.requestDirectory());
 	}
 
 	/**
@@ -4685,6 +4759,9 @@ window.addEventListener('load', () => {
 			case 'merge':
 				refreshOrDisplayError(msg.error, 'Unable to Merge ' + msg.actionOn);
 				break;
+			case 'moveWorktree':
+				gitGraph.processMoveWorktreeResponse(msg.error, msg.conflictWorktreePath);
+				break;
 			case 'openExtensionSettings':
 				finishOrDisplayError(msg.error, 'Unable to Open Extension Settings');
 				break;
@@ -4714,6 +4791,9 @@ window.addEventListener('load', () => {
 				break;
 			case 'removeWorktree':
 				gitGraph.processRemoveWorktreeResponse(msg.error, msg.conflictWorktreePath);
+				break;
+			case 'selectDirectory':
+				gitGraph.processSelectDirectoryResponse(msg.requestId, msg.path);
 				break;
 			case 'unlockWorktree':
 				gitGraph.processUnlockWorktreeResponse(msg.error);

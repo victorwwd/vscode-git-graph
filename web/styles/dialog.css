@@ -61,6 +61,7 @@ body.vscode-high-contrast .dialog{
 
 .dialogContent > table.dialogForm td.inputCol{
 	width:100%;
+	vertical-align:middle;
 }
 
 .dialogContent > table.dialogForm.multi td:nth-child(1){
@@ -129,6 +130,37 @@ body.vscode-high-contrast .dialog{
 .dialogContent > table.dialogForm textarea::placeholder{
 	color:var(--vscode-menu-foreground);
 	opacity:0.4;
+}
+.dialogContent > table.dialogForm .dialogInputWithButton{
+	position:relative;
+	width:100%;
+}
+.dialogContent > table.dialogForm .dialogInputWithButton input[type=text]{
+	width:100%;
+	padding-right:32px;
+	box-sizing:border-box;
+}
+.dialogContent > table.dialogForm .dialogInputBrowseBtn{
+	position:absolute;
+	top:50%;
+	right:3px;
+	transform:translateY(-50%);
+	display:flex;
+	align-items:center;
+	justify-content:center;
+	width:24px;
+	height:24px;
+	box-sizing:border-box;
+	cursor:pointer;
+	border-radius:4px;
+	color:var(--vscode-menu-foreground);
+}
+.dialogContent > table.dialogForm .dialogInputBrowseBtn:hover{
+	background-color:rgba(128,128,128,0.25);
+}
+.dialogContent > table.dialogForm .dialogInputBrowseBtn svg{
+	width:16px;
+	height:16px;
 }
 .dialogContent > table.dialogForm input[type=text]:focus, .dialogContent > table.dialogForm textarea:focus, .dialogContent .dialogFormCheckbox > label > input[type=checkbox]:focus ~ .customCheckbox, .dialogContent .dialogFormRadio > label > input[type=radio]:focus ~ .customRadio{
 	border-color:var(--vscode-focusBorder);

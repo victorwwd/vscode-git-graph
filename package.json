@@ -474,6 +474,10 @@
 									"type": "boolean",
 									"title": "Remove Worktree..."
 								},
+								"rename": {
+									"type": "boolean",
+									"title": "Rename (Move) Worktree..."
+								},
 								"lock": {
 									"type": "boolean",
 									"title": "Lock Worktree..."

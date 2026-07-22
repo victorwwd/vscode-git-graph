@@ -14,11 +14,20 @@ const enum DialogInputType {
 	TextRef,
 	Select,
 	Radio,
-	Checkbox
+	Checkbox,
+	TextWithBrowse
 }
 
 interface DialogTextInput {
 	readonly type: DialogInputType.Text;
+	readonly name: string;
+	readonly default: string;
+	readonly placeholder: string | null;
+	readonly info?: string;
+}
+
+interface DialogTextWithBrowseInput {
+	readonly type: DialogInputType.TextWithBrowse;
 	readonly name: string;
 	readonly default: string;
 	readonly placeholder: string | null;
@@ -80,7 +89,7 @@ interface DialogRadioInputOption {
 	readonly value: string;
 }
 
-type DialogInput = DialogTextInput | DialogTextAreaInput | DialogTextRefInput | DialogSelectInput | DialogRadioInput | DialogCheckboxInput;
+type DialogInput = DialogTextInput | DialogTextAreaInput | DialogTextRefInput | DialogSelectInput | DialogRadioInput | DialogCheckboxInput | DialogTextWithBrowseInput;
 type DialogInputValue = string | string[] | boolean;
 
 type DialogTarget = {
@@ -204,8 +213,10 @@ class Dialog {
 	 * @param secondaryActionName An optional name for the secondary action.
 	 * @param secondaryActioned An optional callback to be invoked when the secondary action is selected by the user.
 	 * @param includeLineBreak Should a line break be added between the message and form inputs.
+	 * @param validate An optional validation function that is invoked before the form is actioned. If it returns a non-null string, the form stays open and the message is shown inline.
+	 * @param onBrowse An optional callback invoked when the browse button of a TextWithBrowse input is clicked. It receives the input's index and should resolve to the chosen path (or null if cancelled); the path is written back into the input's text field. The form stays open so the user can review the value before submitting.
 	 */
-	public showForm(message: string, inputs: ReadonlyArray<DialogInput>, actionName: string, actioned: (values: DialogInputValue[]) => void, target: DialogTarget | null, secondaryActionName: string = 'Cancel', secondaryActioned: ((values: DialogInputValue[]) => void) | null = null, includeLineBreak: boolean = true, validate: ((values: DialogInputValue[]) => string | null) | null = null) {
+	public showForm(message: string, inputs: ReadonlyArray<DialogInput>, actionName: string, actioned: (values: DialogInputValue[]) => void, target: DialogTarget | null, secondaryActionName: string = 'Cancel', secondaryActioned: ((values: DialogInputValue[]) => void) | null = null, includeLineBreak: boolean = true, validate: ((values: DialogInputValue[]) => string | null) | null = null, onBrowse: ((index: number) => Promise<string | null> | null) | null = null) {
 		const multiElement = inputs.length > 1;
 		const multiCheckbox = multiElement && inputs.every((input) => input.type === DialogInputType.Checkbox);
 		const infoColRequired = inputs.some((input) => input.type !== DialogInputType.Checkbox && input.type !== DialogInputType.Radio && input.info);
@@ -223,6 +234,8 @@ class Dialog {
 					inputHtml = '<td class="inputCol"' + (infoColRequired ? ' colspan="2"' : '') + '><span class="dialogFormCheckbox"><label><input id="dialogInput' + id + '" type="checkbox"' + (input.value ? ' checked' : '') + ' tabindex="' + (id + 1) + '"/><span class="customCheckbox"></span>' + (multiElement && !multiCheckbox ? '' : input.name) + infoHtml + '</label></span></td>';
 				} else if (input.type === DialogInputType.TextArea) {
 					inputHtml = '<td class="inputCol"><textarea id="dialogInput' + id + '" rows="4"' + (input.placeholder ? ' placeholder="' + escapeHtml(input.placeholder) + '"' : '') + ' tabindex="' + (id + 1) + '">' + escapeHtml(input.default) + '</textarea></td>' + (infoColRequired ? '<td>' + infoHtml + '</td>' : '');
+				} else if (input.type === DialogInputType.TextWithBrowse) {
+					inputHtml = '<td class="inputCol"><div class="dialogInputWithButton"><input id="dialogInput' + id + '" type="text" value="' + escapeHtml(input.default) + '"' + (input.placeholder !== null ? ' placeholder="' + escapeHtml(input.placeholder) + '"' : '') + ' tabindex="' + (id + 1) + '"/><div id="dialogInputBrowse' + id + '" class="dialogInputBrowseBtn" title="Browse..." tabindex="' + (id + 1) + '"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16"><path fill="currentColor" d="M1.5 3h4.379a1.5 1.5 0 0 1 1.06.44L8.062 4.5H14.5A1.5 1.5 0 0 1 16 6v6.5a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 0 12.5v-8A1.5 1.5 0 0 1 1.5 3z"/></svg></div></div></td>' + (infoColRequired ? '<td>' + infoHtml + '</td>' : '');
 				} else {
 					inputHtml = '<td class="inputCol"><input id="dialogInput' + id + '" type="text" value="' + escapeHtml(input.default) + '"' + (input.type === DialogInputType.Text && input.placeholder !== null ? ' placeholder="' + escapeHtml(input.placeholder) + '"' : '') + ' tabindex="' + (id + 1) + '"/></td>' + (infoColRequired ? '<td>' + infoHtml + '</td>' : '');
 				}
@@ -308,10 +321,30 @@ class Dialog {
 			});
 		}
 
-		if (inputs.length > 0 && (inputs[0].type === DialogInputType.Text || inputs[0].type === DialogInputType.TextRef || inputs[0].type === DialogInputType.TextArea)) {
+		if (inputs.length > 0 && (inputs[0].type === DialogInputType.Text || inputs[0].type === DialogInputType.TextRef || inputs[0].type === DialogInputType.TextArea || inputs[0].type === DialogInputType.TextWithBrowse)) {
 			// If the first input is a text field, set focus to it.
 			const elem = document.getElementById('dialogInput0');
 			if (elem) elem.focus();
+		}
+
+		// Wire up browse buttons for any TextWithBrowse inputs. Clicking triggers the
+		// onBrowse callback (which performs the directory selection asynchronously); the
+		// resolved path is written back into the input's text field. The form stays open.
+		if (onBrowse !== null) {
+			inputs.forEach((input, index) => {
+				if (input.type === DialogInputType.TextWithBrowse) {
+					const btn = document.getElementById('dialogInputBrowse' + index);
+					if (btn) {
+						btn.addEventListener('click', () => {
+							Promise.resolve(onBrowse(index)).then((chosenPath) => {
+								if (chosenPath === null) return; // user cancelled
+								const textInput = document.getElementById('dialogInput' + index);
+								if (textInput) (<HTMLInputElement>textInput).value = chosenPath;
+							});
+						});
+					}
+				}
+			});
 		}
 
 		// Prevent Enter key from submitting dialog when in TextArea

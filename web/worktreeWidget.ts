@@ -187,13 +187,16 @@ class WorktreeWidget {
 			};
 			if (visibility.open) onAction('.wt-open', () => this.view.openWorktreeInNewWindow(path));
 			if (visibility.remove && !isMain) onAction('.wt-remove', () => this.view.removeWorktreeAction(this.worktrees[i]));
+			if (visibility.rename && !isMain) onAction('.wt-rename', () => this.view.renameWorktreeAction(this.worktrees[i]));
 			if (visibility.copyPath) onAction('.wt-copy', () => this.view.copyWorktreePath(path));
 			if (visibility.lock) onAction('.wt-lock', () => this.view.lockWorktreeAction(this.worktrees[i]));
 			if (visibility.unlock) onAction('.wt-unlock', () => this.view.unlockWorktreeAction(this.worktrees[i]));
-			// prunable rows have no working directory — disable open
+			// prunable rows have no working directory — disable open and rename
 			if (isPrunable) {
 				const openBtn = <HTMLElement>row.querySelector('.wt-open');
 				if (openBtn) openBtn.classList.add('disabled');
+				const renameBtn = <HTMLElement>row.querySelector('.wt-rename');
+				if (renameBtn) renameBtn.classList.add('disabled');
 			}
 		}
 
@@ -226,6 +229,7 @@ class WorktreeWidget {
 		let actionsHtml = '<div class="wt-actions">';
 		if (visibility.open) actionsHtml += '<div class="wt-actionBtn wt-open" title="Open in New Window">' + SVG_ICONS.newWindow + '</div>';
 		if (visibility.copyPath) actionsHtml += '<div class="wt-actionBtn wt-copy" title="Copy Path">' + SVG_ICONS.copy + '</div>';
+		if (visibility.rename && !wt.isMain) actionsHtml += '<div class="wt-actionBtn wt-rename" title="Rename (Move) Worktree">' + SVG_ICONS.pencil + '</div>';
 		if (visibility.lock && !wt.isLocked && !wt.isMain) actionsHtml += '<div class="wt-actionBtn wt-lock" title="Lock Worktree">' + SVG_ICONS.lock + '</div>';
 		if (visibility.unlock && wt.isLocked && !wt.isMain) actionsHtml += '<div class="wt-actionBtn wt-unlock" title="Unlock Worktree">' + SVG_ICONS.unlock + '</div>';
 		if (visibility.remove && !wt.isMain) actionsHtml += '<div class="wt-actionBtn wt-remove danger" title="Remove Worktree">' + SVG_ICONS.trash + '</div>';
