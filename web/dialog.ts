@@ -1,4 +1,5 @@
 const CLASS_DIALOG_ACTIVE = 'dialogActive';
+const CLASS_DIALOG_HAS_TEXT_AREA = 'hasTextArea';
 const CLASS_DIALOG_INPUT_INVALID = 'inputInvalid';
 const CLASS_DIALOG_NO_INPUT = 'noInput';
 
@@ -233,7 +234,7 @@ class Dialog {
 				} else if (input.type === DialogInputType.Checkbox) {
 					inputHtml = '<td class="inputCol"' + (infoColRequired ? ' colspan="2"' : '') + '><span class="dialogFormCheckbox"><label><input id="dialogInput' + id + '" type="checkbox"' + (input.value ? ' checked' : '') + ' tabindex="' + (id + 1) + '"/><span class="customCheckbox"></span>' + (multiElement && !multiCheckbox ? '' : input.name) + infoHtml + '</label></span></td>';
 				} else if (input.type === DialogInputType.TextArea) {
-					inputHtml = '<td class="inputCol"><textarea id="dialogInput' + id + '" rows="4"' + (input.placeholder ? ' placeholder="' + escapeHtml(input.placeholder) + '"' : '') + ' tabindex="' + (id + 1) + '">' + escapeHtml(input.default) + '</textarea></td>' + (infoColRequired ? '<td>' + infoHtml + '</td>' : '');
+					inputHtml = '<td class="inputCol"><textarea id="dialogInput' + id + '" rows="8"' + (input.placeholder ? ' placeholder="' + escapeHtml(input.placeholder) + '"' : '') + ' tabindex="' + (id + 1) + '">' + escapeHtml(input.default) + '</textarea></td>' + (infoColRequired ? '<td>' + infoHtml + '</td>' : '');
 				} else if (input.type === DialogInputType.TextWithBrowse) {
 					inputHtml = '<td class="inputCol"><div class="dialogInputWithButton"><input id="dialogInput' + id + '" type="text" value="' + escapeHtml(input.default) + '"' + (input.placeholder !== null ? ' placeholder="' + escapeHtml(input.placeholder) + '"' : '') + ' tabindex="' + (id + 1) + '"/><div id="dialogInputBrowse' + id + '" class="dialogInputBrowseBtn" title="Browse..." tabindex="' + (id + 1) + '"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16"><path fill="currentColor" d="M1.5 3h4.379a1.5 1.5 0 0 1 1.06.44L8.062 4.5H14.5A1.5 1.5 0 0 1 16 6v6.5a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 0 12.5v-8A1.5 1.5 0 0 1 1.5 3z"/></svg></div></div></td>' + (infoColRequired ? '<td>' + infoHtml + '</td>' : '');
 				} else {
@@ -292,6 +293,11 @@ class Dialog {
 			this.close();
 			secondaryActioned(values);
 		} : null, target);
+
+		// Allow dialogs containing a TextArea input to be resized horizontally (the textareas are resizable in both directions)
+		if (this.elem !== null && inputs.some((input) => input.type === DialogInputType.TextArea)) {
+			this.elem.classList.add(CLASS_DIALOG_HAS_TEXT_AREA);
+		}
 
 		// Create custom select inputs
 		inputs.forEach((input, index) => {

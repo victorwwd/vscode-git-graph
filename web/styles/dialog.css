@@ -23,10 +23,18 @@ body.vscode-high-contrast .dialog{
 	padding:10px;
 	max-width:480px;
 }
+.dialog.hasTextArea .dialogContent{
+	max-width:calc(100vw - 40px);
+	overflow-x:auto;
+}
 
 .dialogContent > table.dialogForm{
 	display:inline-table;
 	width:360px;
+}
+.dialog.hasTextArea > .dialogContent > table.dialogForm{
+	min-width:min(560px, calc(100vw - 60px));
+	max-width:calc(100vw - 60px);
 }
 
 .dialogFormError{
@@ -124,8 +132,9 @@ body.vscode-high-contrast .dialog{
 	font-family:var(--vscode-font-family);
 	font-size:13px;
 	line-height:17px;
-	resize:vertical;
+	resize:both;
 	white-space:pre-wrap;
+	max-width:calc(100vw - 84px);
 }
 .dialogContent > table.dialogForm textarea::placeholder{
 	color:var(--vscode-menu-foreground);
