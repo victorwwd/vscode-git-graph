@@ -501,6 +501,7 @@ class Dialog {
 	/**
 	 * Refresh the dialog (if one is currently open in the Git Graph View). If the dialog has a dynamic source, re-link
 	 * it to the newly rendered HTML Element, or close it if the target is no longer visible in the Git Graph View.
+	 * When a form dialog is closed by this method, a message is displayed to inform the user why it was closed.
 	 * @param commits The new array of commits that is rendered in the Git Graph View.
 	 */
 	public refresh(commits: ReadonlyArray<GG.GitCommit>) {
@@ -536,7 +537,13 @@ class Dialog {
 			}
 		}
 
+		// The target of the dialog is no longer visible in the Git Graph View => close the dialog, and inform the
+		// user why it was closed (instead of it silently disappearing while they were interacting with it).
+		const wasFormDialog = this.type === DialogType.Form;
 		this.close();
+		if (wasFormDialog) {
+			this.showMessage('This dialog has been closed because the repository has changed, and the branch or commit the dialog was acting on no longer exists in the Git Graph View. Please review the new state of the repository, and re-run the action if it\'s still required.');
+		}
 	}
 
 	/**

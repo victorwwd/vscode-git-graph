@@ -488,11 +488,10 @@ class GitGraphView {
 			dialog.closeActionRunning();
 
 			if (dialog.isTargetDynamicSource()) {
-				if (refreshState.repoInfoChanges) {
-					dialog.close();
-				} else {
-					dialog.refresh(this.getCommits());
-				}
+				// Attempt to re-link the dialog to its target after the refresh, even if the repository info changed
+				// (e.g. an autofetch updated remote refs while a confirmation dialog was open). The dialog is only
+				// closed by dialog.refresh if its target commit / ref no longer exists in the Git Graph View.
+				dialog.refresh(this.getCommits());
 			}
 
 			if (contextMenu.isTargetDynamicSource()) {
