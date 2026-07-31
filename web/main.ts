@@ -495,11 +495,10 @@ class GitGraphView {
 			}
 
 			if (contextMenu.isTargetDynamicSource()) {
-				if (refreshState.repoInfoChanges) {
-					contextMenu.close();
-				} else {
-					contextMenu.refresh(this.getCommits());
-				}
+				// Same protection as the dialog above: re-link the context menu to its target after the refresh.
+				// contextMenu.refresh closes the menu if its target commit / ref is no longer at the same position
+				// in the Git Graph View (silently, as context menus are transient and can simply be reopened).
+				contextMenu.refresh(this.getCommits());
 			}
 
 			refreshState.inProgress = false;
