@@ -6179,6 +6179,106 @@ describe('DataSource', () => {
 		});
 	});
 
+	describe('cherrypickCommits', () => {
+		it('Should cherrypick multiple commits with a single git command', async () => {
+			// Setup
+			mockGitSuccessOnce();
+			vscode.mockExtensionSettingReturnValue('repository.sign.commits', false);
+
+			// Run
+			const result = await dataSource.cherrypickCommits('/path/to/repo', ['1a2b3c4d5e6f1a2b3c4d5e6f1a2b3c4d5e6f1a2b', '2b3c4d5e6f1a2b3c4d5e6f1a2b3c4d5e6f1a2b3c'], false, false);
+
+			// Assert
+			expect(result).toBe(null);
+			expect(spyOnSpawn).toBeCalledWith('/path/to/git', ['cherry-pick', '1a2b3c4d5e6f1a2b3c4d5e6f1a2b3c4d5e6f1a2b', '2b3c4d5e6f1a2b3c4d5e6f1a2b3c4d5e6f1a2b3c'], expect.objectContaining({ cwd: '/path/to/repo' }));
+			expect(spyOnSpawn).toHaveBeenCalledTimes(1);
+		});
+
+		it('Should cherrypick multiple commits (with record origin, no commit, and signing enabled)', async () => {
+			// Setup
+			mockGitSuccessOnce();
+			vscode.mockExtensionSettingReturnValue('repository.sign.commits', true);
+
+			// Run
+			const result = await dataSource.cherrypickCommits('/path/to/repo', ['1a2b3c4d5e6f1a2b3c4d5e6f1a2b3c4d5e6f1a2b', '2b3c4d5e6f1a2b3c4d5e6f1a2b3c4d5e6f1a2b3c'], true, true);
+
+			// Assert
+			expect(result).toBe(null);
+			expect(spyOnSpawn).toBeCalledWith('/path/to/git', ['cherry-pick', '--no-commit', '-x', '-S', '1a2b3c4d5e6f1a2b3c4d5e6f1a2b3c4d5e6f1a2b', '2b3c4d5e6f1a2b3c4d5e6f1a2b3c4d5e6f1a2b3c'], expect.objectContaining({ cwd: '/path/to/repo' }));
+		});
+
+		it('Should return an error message when no commits are provided', async () => {
+			// Run
+			const result = await dataSource.cherrypickCommits('/path/to/repo', [], false, false);
+
+			// Assert
+			expect(result).toBe('No commits selected for cherry-picking.');
+			expect(spyOnSpawn).not.toHaveBeenCalled();
+		});
+
+		it('Should return an error message thrown by git', async () => {
+			// Setup
+			mockGitThrowingErrorOnce();
+			vscode.mockExtensionSettingReturnValue('repository.sign.commits', false);
+
+			// Run
+			const result = await dataSource.cherrypickCommits('/path/to/repo', ['1a2b3c4d5e6f1a2b3c4d5e6f1a2b3c4d5e6f1a2b', '2b3c4d5e6f1a2b3c4d5e6f1a2b3c4d5e6f1a2b3c'], false, false);
+
+			// Assert
+			expect(result).toBe('error message');
+		});
+	});
+
+	describe('cherrypickAbort', () => {
+		it('Should abort an in-progress cherry-pick', async () => {
+			// Setup
+			mockGitSuccessOnce();
+
+			// Run
+			const result = await dataSource.cherrypickAbort('/path/to/repo');
+
+			// Assert
+			expect(result).toBe(null);
+			expect(spyOnSpawn).toBeCalledWith('/path/to/git', ['cherry-pick', '--abort'], expect.objectContaining({ cwd: '/path/to/repo' }));
+		});
+
+		it('Should return an error message thrown by git', async () => {
+			// Setup
+			mockGitThrowingErrorOnce();
+
+			// Run
+			const result = await dataSource.cherrypickAbort('/path/to/repo');
+
+			// Assert
+			expect(result).toBe('error message');
+		});
+	});
+
+	describe('isCherrypickInProgress', () => {
+		it('Should return TRUE when a cherry-pick is in progress', async () => {
+			// Setup
+			mockGitSuccessOnce('1a2b3c4d5e6f1a2b3c4d5e6f1a2b3c4d5e6f1a2b\n');
+
+			// Run
+			const result = await dataSource.isCherrypickInProgress('/path/to/repo');
+
+			// Assert
+			expect(result).toBe(true);
+			expect(spyOnSpawn).toBeCalledWith('/path/to/git', ['rev-parse', '--verify', 'CHERRY_PICK_HEAD'], expect.objectContaining({ cwd: '/path/to/repo' }));
+		});
+
+		it('Should return FALSE when no cherry-pick is in progress', async () => {
+			// Setup
+			mockGitThrowingErrorOnce();
+
+			// Run
+			const result = await dataSource.isCherrypickInProgress('/path/to/repo');
+
+			// Assert
+			expect(result).toBe(false);
+		});
+	});
+
 	describe('dropCommit', () => {
 		it('Should drop a commit', async () => {
 			// Setup

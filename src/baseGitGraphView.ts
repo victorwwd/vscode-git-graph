@@ -240,6 +240,12 @@ export abstract class BaseGitGraphView extends Disposable {
 					error: await this.dataSource.checkoutCommit(msg.repo, msg.commitHash)
 				});
 				break;
+			case 'cherrypickAbort':
+				this.sendMessage({
+					command: 'cherrypickAbort',
+					error: await this.dataSource.cherrypickAbort(msg.repo)
+				});
+				break;
 			case 'cherrypickCommit':
 				errorInfos = [await this.dataSource.cherrypickCommit(msg.repo, msg.commitHash, msg.parentIndex, msg.recordOrigin, msg.noCommit)];
 				if (errorInfos[0] === null && msg.noCommit) {
@@ -247,14 +253,20 @@ export abstract class BaseGitGraphView extends Disposable {
 				}
 				this.sendMessage({ command: 'cherrypickCommit', errors: errorInfos });
 				break;
-			case 'cherrypickCommits':
-				errorInfos = await this.dataSource.cherrypickCommits(msg.repo, msg.commits, msg.recordOrigin, msg.noCommit);
-				const cherrypickSucceeded = !errorInfos.some((errorInfo) => errorInfo !== null);
-				if (cherrypickSucceeded && msg.noCommit) {
+			case 'cherrypickCommits': {
+				const cherrypickError = await this.dataSource.cherrypickCommits(msg.repo, msg.commits, msg.recordOrigin, msg.noCommit);
+				errorInfos = [cherrypickError];
+				if (cherrypickError === null && msg.noCommit) {
 					errorInfos.push(await viewScm());
 				}
-				this.sendMessage({ command: 'cherrypickCommits', errors: errorInfos });
+				this.sendMessage({
+					command: 'cherrypickCommits',
+					repo: msg.repo,
+					cherryPickInProgress: cherrypickError !== null && await this.dataSource.isCherrypickInProgress(msg.repo),
+					errors: errorInfos
+				});
 				break;
+			}
 			case 'cleanUntrackedFiles':
 				this.sendMessage({
 					command: 'cleanUntrackedFiles',

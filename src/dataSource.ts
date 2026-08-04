@@ -1636,28 +1636,50 @@ export class DataSource extends Disposable {
 	}
 
 	/**
-	 * Cherry-pick multiple commits in sequence.
-	 * Stops on first error (conflict), preserving intermediate state.
+	 * Cherry-pick multiple commits in a repository, using a single Git command so Git's sequencer
+	 * manages the sequence. If a conflict occurs, the repository is left in the cherry-pick state,
+	 * which can be resolved with `git cherry-pick --continue` or aborted with `git cherry-pick --abort`.
 	 * @param repo The path of the repository.
 	 * @param commits Array of commit hashes to cherry-pick (from oldest to newest).
 	 * @param recordOrigin Is `-x` enabled.
 	 * @param noCommit Is `--no-commit` enabled.
-	 * @returns The ErrorInfo from each executed command.
+	 * @returns The ErrorInfo from the executed command.
 	 */
-	public async cherrypickCommits(repo: string, commits: ReadonlyArray<string>, recordOrigin: boolean, noCommit: boolean): Promise<ErrorInfo[]> {
+	public cherrypickCommits(repo: string, commits: ReadonlyArray<string>, recordOrigin: boolean, noCommit: boolean): Promise<ErrorInfo> {
 		if (commits.length === 0) {
-			return ['No commits selected for cherry-picking.'];
+			return Promise.resolve('No commits selected for cherry-picking.');
 		}
 
-		const errors: ErrorInfo[] = [];
-		for (const commitHash of commits) {
-			const error = await this.cherrypickCommit(repo, commitHash, 0, recordOrigin, noCommit);
-			errors.push(error);
-			if (error !== null) {
-				return errors;
-			}
+		const args = ['cherry-pick'];
+		if (noCommit) {
+			args.push('--no-commit');
 		}
-		return errors;
+		if (recordOrigin) {
+			args.push('-x');
+		}
+		if (getConfig().signCommits) {
+			args.push('-S');
+		}
+		args.push(...commits);
+		return this.runGitCommand(args, repo);
+	}
+
+	/**
+	 * Abort an in-progress cherry-pick, restoring the repository to the state before the cherry-pick started.
+	 * @param repo The path of the repository.
+	 * @returns The ErrorInfo from the executed command.
+	 */
+	public cherrypickAbort(repo: string): Promise<ErrorInfo> {
+		return this.runGitCommand(['cherry-pick', '--abort'], repo);
+	}
+
+	/**
+	 * Check whether a cherry-pick is currently in progress in a repository (e.g. stopped on a conflict).
+	 * @param repo The path of the repository.
+	 * @returns TRUE => A cherry-pick is in progress, FALSE => No cherry-pick is in progress.
+	 */
+	public isCherrypickInProgress(repo: string): Promise<boolean> {
+		return this.spawnGit(['rev-parse', '--verify', 'CHERRY_PICK_HEAD'], repo, () => true).catch(() => false);
 	}
 
 	/**

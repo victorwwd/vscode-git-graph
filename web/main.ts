@@ -4611,12 +4611,24 @@ window.addEventListener('load', () => {
 			case 'checkoutCommit':
 				refreshOrDisplayError(msg.error, 'Unable to Checkout Commit');
 				break;
+			case 'cherrypickAbort':
+				refreshOrDisplayError(msg.error, 'Unable to Abort Cherry Pick');
+				break;
 			case 'cherrypickCommit':
 				refreshAndDisplayErrors(msg.errors, 'Unable to Cherry Pick Commit');
 				break;
-			case 'cherrypickCommits':
-				refreshAndDisplayErrors(msg.errors, 'Unable to Cherry Pick Commits');
+			case 'cherrypickCommits': {
+				const reducedErrors = reduceErrorInfos(msg.errors);
+				if (reducedErrors.error !== null) {
+					dialog.showError('Unable to Cherry Pick Commits', reducedErrors.error,
+						msg.cherryPickInProgress ? 'Abort Cherry Pick' : null,
+						msg.cherryPickInProgress ? () => runAction({ command: 'cherrypickAbort', repo: msg.repo }, 'Aborting Cherry Pick') : null
+					);
+				}
+				// Refresh regardless of the outcome, as the cherry-pick sequencer may have applied some commits before stopping on a conflict
+				gitGraph.refresh(false);
 				break;
+			}
 			case 'cleanUntrackedFiles':
 				refreshOrDisplayError(msg.error, 'Unable to Clean Untracked Files');
 				break;

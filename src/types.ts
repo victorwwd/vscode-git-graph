@@ -725,6 +725,13 @@ export interface ResponseCheckoutCommit extends ResponseWithErrorInfo {
 	readonly command: 'checkoutCommit';
 }
 
+export interface RequestCherrypickAbort extends RepoRequest {
+	readonly command: 'cherrypickAbort';
+}
+export interface ResponseCherrypickAbort extends ResponseWithErrorInfo {
+	readonly command: 'cherrypickAbort';
+}
+
 export interface RequestCherrypickCommit extends RepoRequest {
 	readonly command: 'cherrypickCommit';
 	readonly commitHash: string;
@@ -744,6 +751,8 @@ export interface RequestCherrypickCommits extends RepoRequest {
 }
 export interface ResponseCherrypickCommits extends ResponseWithMultiErrorInfo {
 	readonly command: 'cherrypickCommits';
+	readonly repo: string;
+	readonly cherryPickInProgress: boolean; // TRUE => The cherry-pick stopped part way through (e.g. on a conflict), and can be aborted
 }
 
 export interface RequestCleanUntrackedFiles extends RepoRequest {
@@ -1651,6 +1660,7 @@ export type RequestMessage =
 	| RequestBranchFromStash
 	| RequestCheckoutBranch
 	| RequestCheckoutCommit
+	| RequestCherrypickAbort
 	| RequestCherrypickCommit
 	| RequestCherrypickCommits
 	| RequestCleanUntrackedFiles
@@ -1740,6 +1750,7 @@ export type ResponseMessage =
 	| ResponseBranchFromStash
 	| ResponseCheckoutBranch
 	| ResponseCheckoutCommit
+	| ResponseCherrypickAbort
 	| ResponseCherrypickCommit
 	| ResponseCherrypickCommits
 	| ResponseCleanUntrackedFiles
