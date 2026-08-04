@@ -3980,7 +3980,7 @@ class GitGraphView {
 		// corrupt the stored height. Also skip the clamp entirely when the
 		// viewport is abnormally small (e.g. rendering while hidden).
 		if (height > windowHeight - 40 && windowHeight - 40 >= 100) {
-			height = Math.max(windowHeight - 40, 100);
+			height = windowHeight - 40;
 		}
 
 		let heightPx = height + 'px';
@@ -4018,12 +4018,8 @@ class GitGraphView {
 
 	private setCdvWidth(elem: HTMLElement) {
 		let width = this.gitRepos[this.currentRepo].cdvWidth, windowWidth = window.innerWidth;
-		// Clamp for display only; never persist a viewport-limited value, so a
-		// temporarily small viewport (e.g. panel or mid-layout state) cannot
-		// corrupt the stored width. Also skip the clamp entirely when the
-		// viewport is abnormally small (e.g. rendering while hidden).
 		if (width > windowWidth - 100 && windowWidth - 100 >= 200) {
-			width = Math.max(windowWidth - 100, 200);
+			width = windowWidth - 100;
 		}
 
 		let widthPx = width + 'px';
@@ -4121,27 +4117,23 @@ class GitGraphView {
 	}
 
 	private makeCdvDividerDraggable() {
-		let minStart = -1, minExtent = -1;
+		let dragStart = -1, dragExtent = -1;
 
 		const processDraggingCdvDivider: EventListener = (e) => {
-			if (minStart < 0) return;
+			if (dragStart < 0) return;
 			if (this.isCdvDockedRight()) {
 				// Dragging the vertical divider un-collapses the summary first.
 				if (this.gitRepos[this.currentRepo].isCdvSummaryHidden) {
 					this.gitRepos[this.currentRepo].isCdvSummaryHidden = false;
 					this.hideCdvSummary(false);
 				}
-				let percent = ((<MouseEvent>e).clientY - minStart) / minExtent;
-				if (percent < 0.2) percent = 0.2;
-				else if (percent > 0.8) percent = 0.8;
+				let percent = this.clampCdvDivider(((<MouseEvent>e).clientY - dragStart) / dragExtent);
 				if (this.gitRepos[this.currentRepo].cdvVDivider !== percent) {
 					this.gitRepos[this.currentRepo].cdvVDivider = percent;
 					this.setCdvDivider();
 				}
 			} else {
-				let percent = ((<MouseEvent>e).clientX - minStart) / minExtent;
-				if (percent < 0.2) percent = 0.2;
-				else if (percent > 0.8) percent = 0.8;
+				let percent = this.clampCdvDivider(((<MouseEvent>e).clientX - dragStart) / dragExtent);
 				if (this.gitRepos[this.currentRepo].cdvDivider !== percent) {
 					this.gitRepos[this.currentRepo].cdvDivider = percent;
 					this.setCdvDivider();
@@ -4149,10 +4141,10 @@ class GitGraphView {
 			}
 		};
 		const stopDraggingCdvDivider: EventListener = (e) => {
-			if (minStart < 0) return;
+			if (dragStart < 0) return;
 			processDraggingCdvDivider(e);
 			this.saveRepoState();
-			minStart = -1;
+			dragStart = -1;
 			eventOverlay.remove();
 		};
 
@@ -4162,15 +4154,19 @@ class GitGraphView {
 
 			const bounds = contentElem.getBoundingClientRect();
 			if (this.isCdvDockedRight()) {
-				minStart = bounds.top;
-				minExtent = bounds.height;
+				dragStart = bounds.top;
+				dragExtent = bounds.height;
 				eventOverlay.create('rowResize', processDraggingCdvDivider, stopDraggingCdvDivider);
 			} else {
-				minStart = bounds.left;
-				minExtent = bounds.width;
+				dragStart = bounds.left;
+				dragExtent = bounds.width;
 				eventOverlay.create('colResize', processDraggingCdvDivider, stopDraggingCdvDivider);
 			}
 		});
+	}
+
+	private clampCdvDivider(percent: number): number {
+		return Math.min(0.8, Math.max(0.2, percent));
 	}
 
 	/**
