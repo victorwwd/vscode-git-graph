@@ -343,24 +343,49 @@ table { border-collapse: collapse; }
 	cursor:default;
 	border-left:2px solid rgba(128,128,128,0.2);
 }
-/* In the right-docked panel the controls stay on the right edge (vertical), same as bottom dock */
+/* In the right-docked panel the controls form a horizontal toolbar across the top */
 #cdv.dockedRight #cdvContent{
-	top:0;
+	top:32px;
 	bottom:0;
 	left:0;
-	right:32px;
+	right:0;
 }
 #cdv.dockedRight #cdvControls{
 	top:0;
-	bottom:0;
-	left:auto;
+	bottom:auto;
+	left:0;
 	right:0;
-	width:32px;
-	height:auto;
+	width:auto;
+	height:32px;
+	display:flex;
+	flex-direction:row;
+	justify-content:flex-end;
+	align-items:center;
+	border-left:none;
+	border-bottom:2px solid rgba(128,128,128,0.2);
+	background-color:color-mix(in srgb, var(--vscode-editor-background) 90%, rgba(128, 128, 128,1));
 }
 #cdv.dockedRight #cdvDivider{
 	top:0;
 	bottom:0;
+}
+#cdv.dockedRight #cdvSummary{
+	left:0;
+	right:0;
+	width:auto;
+	top:0;
+}
+#cdv.dockedRight #cdvFiles{
+	left:0;
+	right:0;
+	bottom:0;
+}
+#cdv.dockedRight #cdvDivider{
+	left:0;
+	right:0;
+	width:auto;
+	height:6px;
+	cursor:row-resize;
 }
 #cdvContent{
 	position:absolute;
@@ -519,6 +544,11 @@ table { border-collapse: collapse; }
 #cdvSummaryToggleBtn svg{
 	fill:var(--vscode-editor-foreground);
 	fill-opacity:0.6;
+}
+#cdv.dockedRight #cdvSummaryToggleBtn{
+	left:auto;
+	right:4px;
+	top:4px;
 }
 .hidden{
 	display: none;

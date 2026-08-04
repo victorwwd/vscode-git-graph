@@ -20,6 +20,7 @@ const WORKSPACE_VIEW_STATE = 'workspaceViewState';
 
 export const DEFAULT_REPO_STATE: GitRepoState = {
 	cdvDivider: 0.5,
+	cdvVDivider: 0.35,
 	cdvHeight: 250,
 	cdvWidth: 500,
 	columnWidths: null,

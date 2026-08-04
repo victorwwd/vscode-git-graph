@@ -1,4 +1,5 @@
 const ROW_HEIGHT = 24;
+const COLLAPSED_SUMMARY_HEIGHT_PX = 144;
 
 class GitGraphView {
 	private gitRepos: GG.GitRepoSet;
@@ -3722,7 +3723,7 @@ class GitGraphView {
 				// Commit comparison should be shown
 				html += 'Displaying all changes from <b>' + commitOrder.from + '</b> to <b>' + (commitOrder.to !== UNCOMMITTED ? commitOrder.to : 'Uncommitted Changes') + '</b>.';
 			}
-			html += '</div><div id="cdvFiles">' + (!isDocked ? '<div id="cdvSummaryToggleBtn">' + SVG_ICONS.collapse + '</div>' : '') + '<div id="cdvFilesViewWrapper"><div id="cdvFilesView">' + generateFileViewHtml(expandedCommit.fileTree!, expandedCommit.fileChanges!, expandedCommit.lastViewedFile, expandedCommit.contextMenuOpen.fileView, this.getFileViewType(), commitOrder.to === UNCOMMITTED) + '</div></div></div><div id="cdvDivider"></div>';
+			html += '</div><div id="cdvFiles">' + ((!isDocked || this.isCdvDockedRight()) ? '<div id="cdvSummaryToggleBtn">' + SVG_ICONS.collapse + '</div>' : '') + '<div id="cdvFilesViewWrapper"><div id="cdvFilesView">' + generateFileViewHtml(expandedCommit.fileTree!, expandedCommit.fileChanges!, expandedCommit.lastViewedFile, expandedCommit.contextMenuOpen.fileView, this.getFileViewType(), commitOrder.to === UNCOMMITTED) + '</div></div></div><div id="cdvDivider"></div>';
 		}
 		html += '</div><div id="cdvControls"><div id="cdvClose" class="cdvControlBtn" title="Close">' + SVG_ICONS.close + '</div>' +
 			(codeReviewPossible ? '<div id="cdvCodeReview" class="cdvControlBtn">' + SVG_ICONS.review + '</div>' : '') +
@@ -3939,15 +3940,25 @@ class GitGraphView {
 	private hideCdvSummary(hide: boolean) {
 		let btnIcon = document.getElementById('cdvSummaryToggleBtn')?.getElementsByTagName('svg')?.[0] ?? null;
 		let cdvSummary = document.getElementById('cdvSummary');
-		if (hide && !this.isCdvDocked()) {
+
+		if (this.isCdvDockedRight()) {
+			// dockedRight: collapse to a fixed height (never display:none), toggle icon up/down.
+			if (btnIcon) btnIcon.style.transform = hide ? 'rotate(0deg)' : 'rotate(180deg)';
+		} else if (hide && !this.isCdvDocked()) {
+			// inline: hide via .hidden class (existing behavior).
 			if (btnIcon) btnIcon.style.transform = 'rotate(90deg)';
 			cdvSummary!.classList.add('hidden');
 		} else {
+			// inline expand, or bottom-docked (no toggle rendered).
 			if (btnIcon) btnIcon.style.transform = 'rotate(-90deg)';
 			cdvSummary!.classList.remove('hidden');
 		}
+
 		let elem = document.getElementById('cdv');
-		if (elem !== null) this.setCdvHeight(elem, this.isCdvDocked());
+		if (elem !== null) {
+			this.setCdvHeight(elem, this.isCdvDocked());
+			this.setCdvDivider();
+		}
 	}
 
 	private setCdvHeight(elem: HTMLElement, isDocked: boolean) {
@@ -4003,8 +4014,23 @@ class GitGraphView {
 	}
 
 	private setCdvDivider() {
-		let percent = (this.gitRepos[this.currentRepo].cdvDivider * 100).toFixed(2) + '%';
-		let summaryElem = document.getElementById('cdvSummary'), dividerElem = document.getElementById('cdvDivider'), filesElem = document.getElementById('cdvFiles');
+		const repoState = this.gitRepos[this.currentRepo];
+		const summaryElem = document.getElementById('cdvSummary'), dividerElem = document.getElementById('cdvDivider'), filesElem = document.getElementById('cdvFiles');
+
+		if (this.isCdvDockedRight()) {
+			// Vertical (top/bottom) split: summary on top, files below.
+			// Collapsed -> fixed px height; expanded -> cdvVDivider percentage.
+			const size = repoState.isCdvSummaryHidden
+				? (COLLAPSED_SUMMARY_HEIGHT_PX + 'px')
+				: (repoState.cdvVDivider * 100).toFixed(2) + '%';
+			if (summaryElem !== null) summaryElem.style.height = size;
+			if (dividerElem !== null) dividerElem.style.top = size;
+			if (filesElem !== null) filesElem.style.top = size;
+			return;
+		}
+
+		// Horizontal (left/right) split (inline + bottom-docked) — unchanged.
+		let percent = (repoState.cdvDivider * 100).toFixed(2) + '%';
 		if (summaryElem !== null) summaryElem.style.width = percent;
 		if (dividerElem !== null) dividerElem.style.left = percent;
 		if (filesElem !== null) filesElem.style.left = percent;
@@ -4076,24 +4102,38 @@ class GitGraphView {
 	}
 
 	private makeCdvDividerDraggable() {
-		let minX = -1, width = -1;
+		let minStart = -1, minExtent = -1;
 
 		const processDraggingCdvDivider: EventListener = (e) => {
-			if (minX < 0) return;
-			let percent = ((<MouseEvent>e).clientX - minX) / width;
-			if (percent < 0.2) percent = 0.2;
-			else if (percent > 0.8) percent = 0.8;
-
-			if (this.gitRepos[this.currentRepo].cdvDivider !== percent) {
-				this.gitRepos[this.currentRepo].cdvDivider = percent;
-				this.setCdvDivider();
+			if (minStart < 0) return;
+			if (this.isCdvDockedRight()) {
+				// Dragging the vertical divider un-collapses the summary first.
+				if (this.gitRepos[this.currentRepo].isCdvSummaryHidden) {
+					this.gitRepos[this.currentRepo].isCdvSummaryHidden = false;
+					this.hideCdvSummary(false);
+				}
+				let percent = ((<MouseEvent>e).clientY - minStart) / minExtent;
+				if (percent < 0.2) percent = 0.2;
+				else if (percent > 0.8) percent = 0.8;
+				if (this.gitRepos[this.currentRepo].cdvVDivider !== percent) {
+					this.gitRepos[this.currentRepo].cdvVDivider = percent;
+					this.setCdvDivider();
+				}
+			} else {
+				let percent = ((<MouseEvent>e).clientX - minStart) / minExtent;
+				if (percent < 0.2) percent = 0.2;
+				else if (percent > 0.8) percent = 0.8;
+				if (this.gitRepos[this.currentRepo].cdvDivider !== percent) {
+					this.gitRepos[this.currentRepo].cdvDivider = percent;
+					this.setCdvDivider();
+				}
 			}
 		};
 		const stopDraggingCdvDivider: EventListener = (e) => {
-			if (minX < 0) return;
+			if (minStart < 0) return;
 			processDraggingCdvDivider(e);
 			this.saveRepoState();
-			minX = -1;
+			minStart = -1;
 			eventOverlay.remove();
 		};
 
@@ -4102,9 +4142,15 @@ class GitGraphView {
 			if (contentElem === null) return;
 
 			const bounds = contentElem.getBoundingClientRect();
-			minX = bounds.left;
-			width = bounds.width;
-			eventOverlay.create('colResize', processDraggingCdvDivider, stopDraggingCdvDivider);
+			if (this.isCdvDockedRight()) {
+				minStart = bounds.top;
+				minExtent = bounds.height;
+				eventOverlay.create('rowResize', processDraggingCdvDivider, stopDraggingCdvDivider);
+			} else {
+				minStart = bounds.left;
+				minExtent = bounds.width;
+				eventOverlay.create('colResize', processDraggingCdvDivider, stopDraggingCdvDivider);
+			}
 		});
 	}
 

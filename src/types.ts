@@ -217,6 +217,7 @@ export type PullRequestConfig = PullRequestConfigBuiltIn | PullRequestConfigCust
 
 export interface GitRepoState {
 	cdvDivider: number;
+	cdvVDivider: number;
 	cdvHeight: number;
 	cdvWidth: number;
 	columnWidths: ColumnWidth[] | null;
