@@ -3723,7 +3723,7 @@ class GitGraphView {
 				// Commit comparison should be shown
 				html += 'Displaying all changes from <b>' + commitOrder.from + '</b> to <b>' + (commitOrder.to !== UNCOMMITTED ? commitOrder.to : 'Uncommitted Changes') + '</b>.';
 			}
-			html += '</div><div id="cdvFiles">' + ((!isDocked || this.isCdvDockedRight()) ? '<div id="cdvSummaryToggleBtn">' + SVG_ICONS.collapse + '</div>' : '') + '<div id="cdvFilesViewWrapper"><div id="cdvFilesView">' + generateFileViewHtml(expandedCommit.fileTree!, expandedCommit.fileChanges!, expandedCommit.lastViewedFile, expandedCommit.contextMenuOpen.fileView, this.getFileViewType(), commitOrder.to === UNCOMMITTED) + '</div></div></div><div id="cdvDivider"></div>';
+			html += '</div><div id="cdvFiles"><div id="cdvSummaryToggleBtn">' + SVG_ICONS.collapse + '</div>' + '<div id="cdvFilesViewWrapper"><div id="cdvFilesView">' + generateFileViewHtml(expandedCommit.fileTree!, expandedCommit.fileChanges!, expandedCommit.lastViewedFile, expandedCommit.contextMenuOpen.fileView, this.getFileViewType(), commitOrder.to === UNCOMMITTED) + '</div></div></div><div id="cdvDivider"></div>';
 		}
 		html += '</div><div id="cdvControls"><div id="cdvClose" class="cdvControlBtn" title="Close">' + SVG_ICONS.close + '</div>' +
 			(codeReviewPossible ? '<div id="cdvCodeReview" class="cdvControlBtn">' + SVG_ICONS.review + '</div>' : '') +
@@ -3944,18 +3944,23 @@ class GitGraphView {
 		if (this.isCdvDockedRight()) {
 			// dockedRight: collapse to a fixed height (never display:none), toggle icon up/down.
 			if (btnIcon) btnIcon.style.transform = hide ? 'rotate(0deg)' : 'rotate(180deg)';
-		} else if (hide && !this.isCdvDocked()) {
-			// inline: hide via .hidden class (existing behavior).
-			if (btnIcon) btnIcon.style.transform = 'rotate(90deg)';
-			cdvSummary!.classList.add('hidden');
 		} else {
-			// inline expand, or bottom-docked (no toggle rendered).
-			if (btnIcon) btnIcon.style.transform = 'rotate(-90deg)';
-			cdvSummary!.classList.remove('hidden');
+			// inline + bottom-docked: unified .hidden class logic.
+			if (hide) {
+				if (btnIcon) btnIcon.style.transform = 'rotate(90deg)';
+				cdvSummary!.classList.add('hidden');
+			} else {
+				if (btnIcon) btnIcon.style.transform = 'rotate(-90deg)';
+				cdvSummary!.classList.remove('hidden');
+			}
 		}
 
 		let elem = document.getElementById('cdv');
 		if (elem !== null) {
+			// Bottom-docked: let CSS react (transparent panel + click-through to graph)
+			if (this.isCdvDocked() && !this.isCdvDockedRight()) {
+				elem.classList.toggle('cdvSummaryHidden', hide);
+			}
 			this.setCdvHeight(elem, this.isCdvDocked());
 			this.setCdvDivider();
 		}
@@ -3974,14 +3979,19 @@ class GitGraphView {
 		let heightPx = height + 'px';
 		if (isDocked) {
 			if (this.isCdvDockedRight()) {
+				// Right-docked: keep current logic
 				this.setCdvWidth(elem);
 				elem.style.top = this.controlsElem.clientHeight + 'px';
 			} else {
-				this.viewElem.style.bottom = heightPx;
+				// Bottom-docked: fixed div at window bottom; when collapsed the
+				// graph extends into the freed area (viewElem returns to full height)
+				this.viewElem.style.bottom = this.gitRepos[this.currentRepo].isCdvSummaryHidden ? '0px' : heightPx;
 				elem.style.height = heightPx;
 			}
 			return;
 		}
+
+		// Inline: unchanged height logic
 		let inlineElem = document.getElementById('cdvContentWrapper');
 		if (!inlineElem) {
 			elem.style.height = heightPx;
@@ -3994,6 +4004,8 @@ class GitGraphView {
 			inlineElem.style.removeProperty('height');
 			elem.style.height = heightPx;
 		}
+
+		// Only inline needs to re-render graph
 		this.renderGraph();
 	}
 

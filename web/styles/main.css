@@ -677,6 +677,17 @@ table { border-collapse: collapse; }
 	border-top:2px solid rgba(128,128,128,0.2);
 }
 
+/* Bottom-docked collapsed: transparent panel, click-through to graph */
+#cdv.docked.cdvSummaryHidden{
+	background-color:transparent;
+	pointer-events:none;
+}
+#cdv.docked.cdvSummaryHidden #cdvFiles, #cdv.docked.cdvSummaryHidden #cdvControls, #cdv.docked.cdvSummaryHidden #cdvSummaryToggleBtn{
+	pointer-events:auto;
+}
+#cdv.docked.cdvSummaryHidden .cdvHeightResize{
+	border-top:none;
+}
 
 /* File Tree */
 
