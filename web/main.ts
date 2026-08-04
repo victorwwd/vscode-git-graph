@@ -1,5 +1,5 @@
 const ROW_HEIGHT = 24;
-const COLLAPSED_SUMMARY_HEIGHT_PX = 144;
+const COLLAPSED_SUMMARY_HEIGHT_PX = 164; // 8 lines of text (8 * 18px) + 20px vertical padding
 
 class GitGraphView {
 	private gitRepos: GG.GitRepoSet;
@@ -3671,6 +3671,11 @@ class GitGraphView {
 			elem = document.createElement(isDocked ? 'div' : 'tr');
 			elem.id = 'cdv';
 			elem.className = !isDocked ? 'inline' : (this.isCdvDockedRight() ? 'dockedRight' : 'docked');
+			if (isDocked && !this.isCdvDockedRight() && this.gitRepos[this.currentRepo].isCdvSummaryHidden) {
+				// Bottom-docked collapsed: apply the class immediately so the panel is
+				// transparent/click-through from creation (no opaque flash while loading)
+				elem.classList.add('cdvSummaryHidden');
+			}
 			this.setCdvHeight(elem, isDocked);
 			if (isDocked) {
 				document.body.appendChild(elem);
@@ -3685,7 +3690,9 @@ class GitGraphView {
 		if (expandedCommit.loading) {
 			html += '<div id="cdvFiles"></div><div id="cdvLoading">' + SVG_ICONS.loading + ' Loading ' + (expandedCommit.compareWithHash === null ? expandedCommit.commitHash !== UNCOMMITTED ? 'Commit Details' : 'Uncommitted Changes' : 'Commit Comparison') + ' ...</div>';
 		} else {
-			html += '<div id="cdvSummary">';
+			// dockedRight collapses via a fixed summary height (kept visible), so the
+			// .hidden class only applies to inline + bottom-docked.
+			html += '<div id="cdvSummary"' + (!this.isCdvDockedRight() && this.gitRepos[this.currentRepo].isCdvSummaryHidden ? ' class="hidden"' : '') + '>';
 			if (expandedCommit.compareWithHash === null) {
 				// Commit details should be shown
 				if (expandedCommit.commitHash !== UNCOMMITTED) {
@@ -3968,12 +3975,12 @@ class GitGraphView {
 
 	private setCdvHeight(elem: HTMLElement, isDocked: boolean) {
 		let height = this.gitRepos[this.currentRepo].cdvHeight, windowHeight = window.innerHeight;
-		if (height > windowHeight - 40) {
+		// Clamp for display only; never persist a viewport-limited value, so a
+		// temporarily small viewport (e.g. panel or mid-layout state) cannot
+		// corrupt the stored height. Also skip the clamp entirely when the
+		// viewport is abnormally small (e.g. rendering while hidden).
+		if (height > windowHeight - 40 && windowHeight - 40 >= 100) {
 			height = Math.max(windowHeight - 40, 100);
-			if (height !== this.gitRepos[this.currentRepo].cdvHeight) {
-				this.gitRepos[this.currentRepo].cdvHeight = height;
-				this.saveRepoState();
-			}
 		}
 
 		let heightPx = height + 'px';
@@ -4011,12 +4018,12 @@ class GitGraphView {
 
 	private setCdvWidth(elem: HTMLElement) {
 		let width = this.gitRepos[this.currentRepo].cdvWidth, windowWidth = window.innerWidth;
-		if (width > windowWidth - 100) {
+		// Clamp for display only; never persist a viewport-limited value, so a
+		// temporarily small viewport (e.g. panel or mid-layout state) cannot
+		// corrupt the stored width. Also skip the clamp entirely when the
+		// viewport is abnormally small (e.g. rendering while hidden).
+		if (width > windowWidth - 100 && windowWidth - 100 >= 200) {
 			width = Math.max(windowWidth - 100, 200);
-			if (width !== this.gitRepos[this.currentRepo].cdvWidth) {
-				this.gitRepos[this.currentRepo].cdvWidth = width;
-				this.saveRepoState();
-			}
 		}
 
 		let widthPx = width + 'px';

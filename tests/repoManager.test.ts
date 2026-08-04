@@ -1900,8 +1900,8 @@ describe('RepoManager', () => {
 				const expected: GitRepoSet = {
 					'/path/to/workspace-folder1/repo': {
 						cdvDivider: 0.5,
-						cdvHeight: 250,
-						cdvWidth: 500,
+						cdvHeight: 304,
+						cdvWidth: 665,
 						cdvVDivider: 0.35,
 						columnWidths: null,
 						commitOrdering: RepoCommitOrdering.Default,
@@ -2260,8 +2260,8 @@ describe('RepoManager', () => {
 			expect(spyOnSaveRepos).toHaveBeenCalledWith({
 				'/path/to/workspace-folder1/repo1': {
 					cdvDivider: 0.5,
-					cdvHeight: 250,
-					cdvWidth: 500,
+					cdvHeight: 304,
+					cdvWidth: 665,
 					cdvVDivider: 0.35,
 					columnWidths: null,
 					commitOrdering: RepoCommitOrdering.Default,
@@ -2345,8 +2345,8 @@ describe('RepoManager', () => {
 			expect(spyOnSaveRepos).toHaveBeenCalledWith({
 				'/path/to/workspace-folder1/repo1': {
 					cdvDivider: 0.5,
-					cdvHeight: 250,
-					cdvWidth: 500,
+					cdvHeight: 304,
+					cdvWidth: 665,
 					cdvVDivider: 0.35,
 					columnWidths: null,
 					commitOrdering: RepoCommitOrdering.Default,

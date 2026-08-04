@@ -113,8 +113,8 @@ describe('ExtensionState', () => {
 			expect(result).toStrictEqual({
 				'/path/to/repo': {
 					cdvDivider: 0.5,
-					cdvHeight: 250,
-					cdvWidth: 500,
+					cdvHeight: 304,
+					cdvWidth: 665,
 					cdvVDivider: 0.35,
 					columnWidths: null,
 					commitOrdering: RepoCommitOrdering.Default,
@@ -158,8 +158,8 @@ describe('ExtensionState', () => {
 			expect(result).toStrictEqual({
 				'/path/to/repo': {
 					cdvDivider: 0.5,
-					cdvHeight: 250,
-					cdvWidth: 500,
+					cdvHeight: 304,
+					cdvWidth: 665,
 					cdvVDivider: 0.35,
 					columnWidths: null,
 					commitOrdering: RepoCommitOrdering.Default,
@@ -203,8 +203,8 @@ describe('ExtensionState', () => {
 			expect(result).toStrictEqual({
 				'/path/to/repo': {
 					cdvDivider: 0.5,
-					cdvHeight: 250,
-					cdvWidth: 500,
+					cdvHeight: 304,
+					cdvWidth: 665,
 					cdvVDivider: 0.35,
 					columnWidths: null,
 					commitOrdering: RepoCommitOrdering.Default,
@@ -248,8 +248,8 @@ describe('ExtensionState', () => {
 			expect(result).toStrictEqual({
 				'/path/to/repo': {
 					cdvDivider: 0.5,
-					cdvHeight: 250,
-					cdvWidth: 500,
+					cdvHeight: 304,
+					cdvWidth: 665,
 					cdvVDivider: 0.35,
 					columnWidths: null,
 					commitOrdering: RepoCommitOrdering.Default,
@@ -293,8 +293,8 @@ describe('ExtensionState', () => {
 			expect(result).toStrictEqual({
 				'/path/to/repo': {
 					cdvDivider: 0.5,
-					cdvHeight: 250,
-					cdvWidth: 500,
+					cdvHeight: 304,
+					cdvWidth: 665,
 					cdvVDivider: 0.35,
 					columnWidths: null,
 					commitOrdering: RepoCommitOrdering.Default,
@@ -341,8 +341,8 @@ describe('ExtensionState', () => {
 			expect(result).toStrictEqual({
 				'/path/to/repo-1': {
 					cdvDivider: 0.5,
-					cdvHeight: 250,
-					cdvWidth: 500,
+					cdvHeight: 304,
+					cdvWidth: 665,
 					cdvVDivider: 0.35,
 					columnWidths: null,
 					commitOrdering: RepoCommitOrdering.Default,
@@ -369,8 +369,8 @@ describe('ExtensionState', () => {
 				},
 				'/path/to/repo-2': {
 					cdvDivider: 0.5,
-					cdvHeight: 250,
-					cdvWidth: 500,
+					cdvHeight: 304,
+					cdvWidth: 665,
 					cdvVDivider: 0.35,
 					columnWidths: null,
 					commitOrdering: RepoCommitOrdering.Default,
