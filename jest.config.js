@@ -5,6 +5,7 @@ module.exports = {
 			tsconfig: './tests/tsconfig.json'
 		}]
 	},
+	setupFiles: ['<rootDir>/tests/setup.ts'],
 	testRegex: '\\.test\\.ts$',
 	moduleFileExtensions: ['ts', 'js'],
 	collectCoverageFrom: [

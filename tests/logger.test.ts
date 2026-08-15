@@ -104,14 +104,19 @@ describe('Logger', () => {
 		const logPath = path.join(os.tmpdir(), 'git-graph-2020-04-22.log');
 
 		afterEach(() => {
+			delete process.env.GIT_GRAPH_FILE_LOG;
 			try { fs.unlinkSync(logPath); } catch (_) { /* already gone */ }
 		});
 
 		it('Should mirror log and error lines to the daily file in the temp directory', () => {
+			// Setup: the global setup disables the sink; opt back in for this test
+			process.env.GIT_GRAPH_FILE_LOG = '1';
+			const fileLogger = new Logger();
+
 			// Run
-			logger.log('FileSinkTest');
-			logger.logError('FileSinkError');
-			logger.dispose();
+			fileLogger.log('FileSinkTest');
+			fileLogger.logError('FileSinkError');
+			fileLogger.dispose();
 
 			// Assert
 			const contents = fs.readFileSync(logPath, 'utf8');

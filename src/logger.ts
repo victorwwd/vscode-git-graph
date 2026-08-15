@@ -10,6 +10,9 @@ const DOUBLE_QUOTE_REGEXP = /"/g;
 const FILE_LOG_MAX_BYTES = 50 * 1024 * 1024;
 /** Prefix of the rolling file logs, kept for the current day only. */
 const FILE_LOG_PREFIX = 'git-graph-';
+/** Set to disable the file sink (tests run suites in parallel workers that would
+ * race on the shared temp-dir file; the sink itself is covered by logger.test.ts). */
+const FILE_LOG_DISABLED_ENV = 'GIT_GRAPH_FILE_LOG';
 
 /**
  * Manages the Git Graph Logger, which writes log information to the Git Graph
@@ -77,6 +80,10 @@ export class Logger extends Disposable {
 	 * disable the file sink for the session.
 	 */
 	private openFileLog(): void {
+		if (process.env[FILE_LOG_DISABLED_ENV] === '0') {
+			this.fileLogDisabled = true;
+			return;
+		}
 		try {
 			const today = fileLogDay(new Date());
 			this.deleteStaleFileLogs(today);

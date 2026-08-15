@@ -1,5 +1,13 @@
 # Change Log
 
+## 1.32.3 - 2026-08-15
+ * Harden interactive rebase against multi-commit failure modes: merge commits are excluded from the rebase plan (`pick` cannot take them), squash/fixup as the first applied commit is rejected at plan time, cancelling a message prompt keeps the original message instead of stalling the rebase, the prompt watcher is re-armed after a window reload, and session temp directories are cleaned up.
+ * Defer index-touching git commands (`git status`, `git diff`) while a rebase child process runs - on Windows a concurrent reader can break the rebase's atomic index rename ("Unable to write new index file").
+ * Add a daily diagnostic log file (`%TEMP%/git-graph-YYYY-MM-DD.log`, current day only, 50MB cap): every webview action, every git command and its raw error on failure, rebase busy windows and prompt protocol events.
+ * Add 'Push to Here' commit context menu action.
+ * Auto-fade the completed rebase status bar after 5 seconds.
+ * Fix a log false-error on every refresh in repositories without stashes.
+
 ## 1.31.7 - 2026-03-14
  * #77 Add 'No Verify' option for push, merge and squash action (#68). Thanks [@th0was14](https://github.com/@th0was14).
  * #70 Fix preserve commit selection state across tab switches. Thanks [@LeuciRemi](https://github.com/LeuciRemi).
