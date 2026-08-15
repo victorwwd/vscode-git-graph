@@ -3631,7 +3631,9 @@ describe('GitGraphView', () => {
 					command: 'viewScm',
 					error: null
 				});
-				expect(spyOnLog).not.toHaveBeenCalled();
+				// The action trace is the only expected log line
+				expect(spyOnLog).toHaveBeenCalledWith('[action] viewScm');
+				expect(spyOnLog).toHaveBeenCalledTimes(1);
 				expect(spyOnLogError).not.toHaveBeenCalled();
 			});
 		});
@@ -3653,7 +3655,9 @@ describe('GitGraphView', () => {
 					command: 'viewScm',
 					error: null
 				});
-				expect(spyOnLog).not.toHaveBeenCalled();
+				// The action trace is the only expected log line
+				expect(spyOnLog).toHaveBeenCalledWith('[action] viewScm');
+				expect(spyOnLog).toHaveBeenCalledTimes(1);
 				expect(spyOnLogError).toHaveBeenCalledWith('Unable to send "viewScm" message to the Git Graph View.');
 			});
 		});

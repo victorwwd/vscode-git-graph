@@ -67,12 +67,19 @@ export class RebaseSession {
 	 * alive. Nested/drive-by calls are counted so overlapping windows resolve
 	 * only when the outermost one ends.
 	 */
-	private async withGitBusy<T>(run: () => Promise<T>): Promise<T> {
+	private async withGitBusy<T>(repo: string, run: () => Promise<T>): Promise<T> {
 		this.gitBusyCount++;
+		if (this.gitBusyCount === 1) {
+			this.logger.log('[rebase] git busy window: enter (repo=' + repo + ')');
+		}
+		const startedAt = Date.now();
 		try {
 			return await run();
 		} finally {
 			this.gitBusyCount--;
+			if (this.gitBusyCount === 0) {
+				this.logger.log('[rebase] git busy window: exit (repo=' + repo + ', ' + (Date.now() - startedAt) + 'ms)');
+			}
 		}
 	}
 
@@ -131,13 +138,18 @@ export class RebaseSession {
 
 		const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'gg-rebase-'));
 		this.writeArtifacts(tmpDir, plan);
+		this.logger.log('[rebase] start: repo=' + repo + ' base=' + base + ' items=' + plan.length +
+			' actions=[' + plan.map((item) => item.action).join(',') + '] tmpDir=' + tmpDir);
 
 		const session: RebaseSessionState = { repo, base, origHead, plan, tmpDir, startedAt: Date.now() };
 		await this.state.setRebaseSession(repo, session);
 		this.startPromptWatcher(repo, session);
 
 		const env = this.buildEnv(tmpDir);
-		const error = await this.withGitBusy(() => this.dataSource.startInteractiveRebase(repo, base, env));
+		const error = await this.withGitBusy(repo, () => this.dataSource.startInteractiveRebase(repo, base, env));
+		if (error !== null) {
+			this.logger.logError('[rebase] start: git rebase failed in repo=' + repo + ' base=' + base + ': ' + error);
+		}
 		const status = await this.computeStatusAfterRun(repo, session, error);
 		if (status.state === RebaseLiveStateKind.Completed || status.state === RebaseLiveStateKind.Aborted) {
 			await this.state.clearRebaseSession(repo);
@@ -171,34 +183,37 @@ export class RebaseSession {
 		let error: ErrorInfo = null;
 		switch (action) {
 			case RebaseControlAction.Continue:
-				error = await this.withGitBusy(() => this.dataSource.rebaseContinue(repo, env));
+				error = await this.withGitBusy(repo, () => this.dataSource.rebaseContinue(repo, env));
 				break;
 			case RebaseControlAction.AmendContinue:
-				error = await this.withGitBusy(() => this.dataSource.rebaseAmendContinue(repo, env));
+				error = await this.withGitBusy(repo, () => this.dataSource.rebaseAmendContinue(repo, env));
 				break;
 			case RebaseControlAction.AmendRewordContinue: {
 				const prep = await this.prepareRewordMessage(repo, session);
 				if (prep.error !== null) {
 					return { error: prep.error, status: await this.computeStatusAfterRun(repo, session, prep.error) };
 				}
-				error = await this.withGitBusy(() => this.dataSource.rebaseAmendRewordContinue(repo, prep.msgPath, env));
+				error = await this.withGitBusy(repo, () => this.dataSource.rebaseAmendRewordContinue(repo, prep.msgPath, env));
 				break;
 			}
 			case RebaseControlAction.Skip:
-				error = await this.withGitBusy(() => this.dataSource.rebaseSkip(repo));
+				error = await this.withGitBusy(repo, () => this.dataSource.rebaseSkip(repo));
 				break;
 			case RebaseControlAction.Abort:
-				error = await this.withGitBusy(() => this.dataSource.rebaseAbort(repo));
+				error = await this.withGitBusy(repo, () => this.dataSource.rebaseAbort(repo));
 				await this.state.clearRebaseSession(repo);
 				this.stopPromptWatcher(repo);
 				this.cleanupTmpDir(session.tmpDir);
 				return { error, status: this.idleStatus(session.origHead, false) };
 			case RebaseControlAction.Undo:
-				error = await this.withGitBusy(() => this.dataSource.undoLastRebase(repo, session.origHead));
+				error = await this.withGitBusy(repo, () => this.dataSource.undoLastRebase(repo, session.origHead));
 				await this.state.clearRebaseSession(repo);
 				this.stopPromptWatcher(repo);
 				this.cleanupTmpDir(session.tmpDir);
 				return { error, status: this.idleStatus(null, false) };
+		}
+		if (error !== null) {
+			this.logger.logError('[rebase] control ' + action + ': git failed in repo=' + repo + ': ' + error);
 		}
 		const status = await this.computeStatusAfterRun(repo, session, error);
 		if (status.state === RebaseLiveStateKind.Completed || status.state === RebaseLiveStateKind.Aborted) {
@@ -246,9 +261,13 @@ export class RebaseSession {
 			try {
 				const status = await this.query(repo);
 				if (status.state !== RebaseLiveStateKind.Idle || status.canUndo) {
+					this.logger.log('[rebase] resumeAll: restored state=' + status.state + ' repo=' + repo);
 					notify(repo, status);
 				}
-			} catch (_) { /* repo no longer accessible; skip */ }
+			} catch (err) {
+				// repo no longer accessible; skip
+				this.logger.log('[rebase] resumeAll: repo query failed: ' + repo + ': ' + (err as Error).message);
+			}
 		}
 	}
 
@@ -329,7 +348,10 @@ export class RebaseSession {
 				checkForPrompt();
 			});
 			this.promptWatchers[repo] = watcher;
-		} catch (_) { /* tmpDir missing or unwatchable; polling fallback will still run */ }
+		} catch (err) {
+			// tmpDir missing or unwatchable; polling fallback will still run
+			this.logger.log('[rebase] prompt: fs.watch unavailable, relying on polling: ' + (err as Error).message);
+		}
 
 		// Polling fallback: fs.watch is known to miss events on some Windows/Node
 		// combinations. Unref'd so it doesn't keep the extension host alive.

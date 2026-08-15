@@ -2,6 +2,10 @@ import * as date from './mocks/date';
 import * as vscode from './mocks/vscode';
 jest.mock('vscode', () => vscode, { virtual: true });
 
+import * as fs from 'fs';
+import * as os from 'os';
+import * as path from 'path';
+
 import { Logger } from '../src/logger';
 
 const outputChannel = vscode.mocks.outputChannel;
@@ -94,5 +98,25 @@ describe('Logger', () => {
 
 		// Assert
 		expect(outputChannel.appendLine).toHaveBeenCalledWith('[2020-04-22 12:40:58.010] ERROR: Test');
+	});
+
+	describe('File sink', () => {
+		const logPath = path.join(os.tmpdir(), 'git-graph-2020-04-22.log');
+
+		afterEach(() => {
+			try { fs.unlinkSync(logPath); } catch (_) { /* already gone */ }
+		});
+
+		it('Should mirror log and error lines to the daily file in the temp directory', () => {
+			// Run
+			logger.log('FileSinkTest');
+			logger.logError('FileSinkError');
+			logger.dispose();
+
+			// Assert
+			const contents = fs.readFileSync(logPath, 'utf8');
+			expect(contents).toContain('[2020-04-22 12:40:58.000] FileSinkTest');
+			expect(contents).toContain('ERROR: FileSinkError');
+		});
 	});
 });

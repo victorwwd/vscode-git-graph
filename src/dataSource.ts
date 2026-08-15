@@ -1512,6 +1512,9 @@ export class DataSource extends Disposable {
 			const deadline = Date.now() + timeoutMs;
 			const poll = () => {
 				if (!this.isGitBusy() || Date.now() >= deadline) {
+					if (this.isGitBusy()) {
+						this.logger.log('git busy probe still busy after ' + timeoutMs + 'ms; proceeding anyway');
+					}
 					resolve();
 					return;
 				}
@@ -1856,11 +1859,17 @@ export class DataSource extends Disposable {
 
 			resolveSpawnOutput(cp.spawn(this.gitExecutable.path, args, { cwd: repo, env }))
 				.then(([status, stdout, stderr]) => {
-					resolve(status.code !== 0 ? getErrorMessage(status.error, stdout, stderr) : null);
+					if (status.code !== 0) {
+						this.logger.log('git failed (exit ' + status.code + ') in ' + repo + ': ' + args.join(' ').slice(0, 120) + ' :: ' + getErrorMessage(status.error, stdout, stderr).slice(0, 300));
+						resolve(getErrorMessage(status.error, stdout, stderr));
+					} else {
+						resolve(null);
+					}
 				})
 				.catch((errorMessage) => {
 					resolve(errorMessage);
 				});
+			this.logger.logCmd('git', args);
 		});
 	}
 
@@ -1964,11 +1973,17 @@ export class DataSource extends Disposable {
 
 			resolveSpawnOutput(cp.spawn(this.gitExecutable.path, args, { cwd: repo, env }))
 				.then(([status, stdout, stderr]) => {
-					resolve(status.code !== 0 ? getErrorMessage(status.error, stdout, stderr) : null);
+					if (status.code !== 0) {
+						this.logger.log('git failed (exit ' + status.code + ') in ' + repo + ': ' + args.join(' ').slice(0, 120) + ' :: ' + getErrorMessage(status.error, stdout, stderr).slice(0, 300));
+						resolve(getErrorMessage(status.error, stdout, stderr));
+					} else {
+						resolve(null);
+					}
 				})
 				.catch((errorMessage) => {
 					resolve(errorMessage);
 				});
+			this.logger.logCmd('git', args);
 		});
 	}
 
@@ -2710,6 +2725,7 @@ export class DataSource extends Disposable {
 					if (status.code === 0) {
 						resolve(null);
 					} else {
+						this.logger.log('git failed (exit ' + status.code + ') in ' + repo + ': ' + args.join(' ').slice(0, 120) + ' :: ' + getErrorMessage(status.error, stdout, stderr).slice(0, 300));
 						resolve(getErrorMessage(status.error, stdout, stderr));
 					}
 				});
@@ -2748,6 +2764,7 @@ export class DataSource extends Disposable {
 				if (status.code === 0 || ignoreExitCode) {
 					resolve(resolveValue(stdout, stderr));
 				} else {
+					this.logger.log('git failed (exit ' + status.code + ') in ' + repo + ': ' + args.join(' ').slice(0, 120) + ' :: ' + getErrorMessage(status.error, stdout, stderr).slice(0, 300));
 					reject(getErrorMessage(status.error, stdout, stderr));
 				}
 			});

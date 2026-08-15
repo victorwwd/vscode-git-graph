@@ -27,7 +27,13 @@ interface StateMock {
 	clearRebaseSession: jest.Mock;
 }
 
-function makeMocks(): { session: RebaseSession; dataSource: DataSourceMock; state: StateMock } {
+interface LoggerMock {
+	log: jest.Mock;
+	logError: jest.Mock;
+	logCmd: jest.Mock;
+}
+
+function makeMocks(): { session: RebaseSession; dataSource: DataSourceMock; state: StateMock; logger: LoggerMock } {
 	const dataSource: DataSourceMock = {
 		startInteractiveRebase: jest.fn().mockResolvedValue(null),
 		rebaseContinue: jest.fn().mockResolvedValue(null),
@@ -46,8 +52,9 @@ function makeMocks(): { session: RebaseSession; dataSource: DataSourceMock; stat
 		setRebaseSession: jest.fn().mockResolvedValue(null),
 		clearRebaseSession: jest.fn().mockResolvedValue(null)
 	};
-	const session = new RebaseSession(dataSource as any, state as any, '/ext/path', { log: jest.fn(), logError: jest.fn(), logCmd: jest.fn() } as any);
-	return { session, dataSource, state };
+	const logger: LoggerMock = { log: jest.fn(), logError: jest.fn(), logCmd: jest.fn() };
+	const session = new RebaseSession(dataSource as any, state as any, '/ext/path', logger as any);
+	return { session, dataSource, state, logger };
 }
 
 const samplePlan: RebasePlanItem[] = [
@@ -297,5 +304,23 @@ describe('RebaseSession.isGitBusy', () => {
 
 		await session.control('/repo', RebaseControlAction.Continue);
 		expect(busyDuringInner).toBe(true);
+	});
+
+	it('logs the busy window boundaries and git errors for control actions', async () => {
+		const { session, dataSource, state, logger } = makeMocks();
+		state.getRebaseSession.mockReturnValue({
+			repo: '/repo', base: 'b', origHead: 'origHead123', plan: samplePlan, tmpDir: '/t', startedAt: 0
+		});
+		dataSource.getRebaseStatus.mockResolvedValue({ state: 'idle', progress: null, conflicts: [] });
+		dataSource.rebaseContinue.mockResolvedValue('fatal: demo git failure');
+
+		await session.control('/repo', RebaseControlAction.Continue);
+
+		const messages = logger.log.mock.calls.map((call: unknown[]) => String(call[0]));
+		expect(messages).toContainEqual(expect.stringContaining('[rebase] git busy window: enter'));
+		expect(messages).toContainEqual(expect.stringContaining('[rebase] git busy window: exit'));
+		const errorMessages = logger.logError.mock.calls.map((call: unknown[]) => String(call[0]));
+		expect(errorMessages).toContainEqual(expect.stringContaining('[rebase] control continue: git failed'));
+		expect(errorMessages).toContainEqual(expect.stringContaining('fatal: demo git failure'));
 	});
 });

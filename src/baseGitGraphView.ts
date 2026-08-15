@@ -8,7 +8,7 @@ import { Logger } from './logger';
 import { RebaseSession } from './rebaseSession';
 import { RepoFileWatcher } from './repoFileWatcher';
 import { RepoManager } from './repoManager';
-import { ErrorInfo, GitConfigLocation, GitGraphViewInitialState, GitPushBranchMode, GitRepoSet, LoadGitGraphViewTo, RebaseLiveStatus, RequestCommitMessages, RequestDropCommits, RequestMessage, RequestSquashCommits, ResponseMessage } from './types';
+import { ErrorInfo, GitConfigLocation, GitGraphViewInitialState, GitPushBranchMode, GitRepoSet, LoadGitGraphViewTo, RebaseLiveStatus, RepoRequest, RequestCommitMessages, RequestDropCommits, RequestMessage, RequestSquashCommits, ResponseMessage } from './types';
 import { UNABLE_TO_FIND_GIT_MSG, UNCOMMITTED, applyPatch, archive, copyFilePathToClipboard, copyFilePathsToClipboard, copyToClipboard, createPullRequest, generatePatch, getNonce, getPathFromUri, openExtensionSettings, openExternalUrl, openFile, openFolder, showErrorMessage, viewDiff, viewDiffWithWorkingFile, viewFileAtRevision, viewMultiFileDiff, viewScm } from './utils';
 import { Disposable, toDisposable } from './utils/disposable';
 
@@ -188,6 +188,10 @@ export abstract class BaseGitGraphView extends Disposable {
 	 * @param msg The message that was received.
 	 */
 	private async respondToMessage(msg: RequestMessage) {
+		// Trace every webview-initiated action; `> git ...` lines that follow
+		// identify which user action spawned them.
+		const repo = (msg as RepoRequest).repo;
+		this.logger.log('[action] ' + msg.command + (repo !== undefined ? ' repo=' + repo : ''));
 		this.repoFileWatcher.mute();
 		let errorInfos: ErrorInfo[];
 
