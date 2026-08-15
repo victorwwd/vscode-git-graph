@@ -159,3 +159,8 @@
 	opacity: 0.9;
 	padding: 2px 0;
 }
+
+.rebaseStatusBar.rebaseStatusBarFading {
+	opacity: 0;
+	transition: opacity 0.4s ease;
+}

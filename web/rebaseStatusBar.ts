@@ -5,9 +5,13 @@ type RebaseControlHandler = (action: GG.RebaseControlAction) => void;
  * while a rebase is running, paused for conflicts/edit, or has just completed (to offer Undo).
  */
 class RebaseStatusBar {
+	private static readonly COMPLETED_FADE_DELAY_MS = 5000;
+	private static readonly FADE_DURATION_MS = 400;
+
 	private readonly host: HTMLElement;
 	private root: HTMLDivElement | null = null;
 	private pendingAction: boolean = false;
+	private fadeTimer: number | null = null;
 
 	constructor(host: HTMLElement) {
 		this.host = host;
@@ -25,6 +29,10 @@ class RebaseStatusBar {
 	}
 
 	public clear() {
+		if (this.fadeTimer !== null) {
+			window.clearTimeout(this.fadeTimer);
+			this.fadeTimer = null;
+		}
 		if (this.root !== null) {
 			this.root.remove();
 			this.root = null;
@@ -84,6 +92,19 @@ class RebaseStatusBar {
 
 		this.host.prepend(root);
 		this.root = root;
+
+		// Success is transient — auto-fade so it doesn't linger. Failure stays put.
+		if (status.state === GG.RebaseLiveStateKind.Completed) {
+			this.fadeTimer = window.setTimeout(() => {
+				this.fadeTimer = null;
+				if (this.root === null) return;
+				this.root.classList.add('rebaseStatusBarFading');
+				this.fadeTimer = window.setTimeout(() => {
+					this.fadeTimer = null;
+					this.clear();
+				}, RebaseStatusBar.FADE_DURATION_MS);
+			}, RebaseStatusBar.COMPLETED_FADE_DELAY_MS);
+		}
 	}
 
 	private summaryText(status: GG.RebaseLiveStatus): string {
