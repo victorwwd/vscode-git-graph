@@ -1,6 +1,7 @@
 jest.mock('fs');
 
 import * as fs from 'fs';
+import * as path from 'path';
 import { RebaseSession } from '../src/rebaseSession';
 import { RebaseAction, RebaseControlAction, RebaseLiveStateKind, RebasePlanItem } from '../src/types';
 
@@ -57,6 +58,7 @@ beforeEach(() => {
 	fsMock.mkdtempSync.mockReturnValue('/tmp/gg-rebase-xxx' as any);
 	fsMock.mkdirSync.mockReturnValue(undefined as any);
 	fsMock.writeFileSync.mockReturnValue(undefined as any);
+	fsMock.rmSync.mockReturnValue(undefined as any);
 });
 
 afterEach(() => {
@@ -229,5 +231,31 @@ describe('RebaseSession.query', () => {
 
 		expect(result.state).toBe(RebaseLiveStateKind.Conflict);
 		expect(result.conflicts).toEqual(['a.txt']);
+	});
+
+	it('re-arms the prompt watcher for a live rebase whose watcher was lost to a host restart', async () => {
+		const { session, dataSource, state } = makeMocks();
+		state.getRebaseSession.mockReturnValue({
+			repo: '/repo', base: 'b', origHead: 'origHead123', plan: [], tmpDir: '/t', startedAt: 0
+		});
+		dataSource.getRebaseStatus.mockResolvedValue({
+			state: 'conflict', progress: { done: 2, total: 5, currentOid: 'x' }, conflicts: ['a.txt']
+		});
+
+		await session.query('/repo');
+
+		expect(fsMock.watch).toHaveBeenCalledWith(path.join('/t', 'prompt'), expect.anything(), expect.any(Function));
+	});
+
+	it('cleans up the session tmpDir when git reports no rebase', async () => {
+		const { session, dataSource, state } = makeMocks();
+		state.getRebaseSession.mockReturnValue({
+			repo: '/repo', base: 'b', origHead: 'origHead123', plan: [], tmpDir: '/t', startedAt: 0
+		});
+		dataSource.getRebaseStatus.mockResolvedValue({ state: 'idle', progress: null, conflicts: [] });
+
+		await session.query('/repo');
+
+		expect(fsMock.rmSync).toHaveBeenCalledWith('/t', { recursive: true, force: true });
 	});
 });

@@ -73,7 +73,7 @@ describe('DataSource - Interactive Rebase', () => {
 	};
 
 	describe('listRebaseCandidates', () => {
-		it('returns parsed commits from git log base..HEAD', async () => {
+		it('returns parsed commits from git log base..HEAD, excluding merges', async () => {
 			// Setup
 			const stdout =
 				'aaaaaaa\x00subject one\x1e\n' +
@@ -91,7 +91,7 @@ describe('DataSource - Interactive Rebase', () => {
 			]);
 			expect(spyOnSpawn).toBeCalledWith(
 				'/path/to/git',
-				['log', '--reverse', '--format=%H%x00%s%x1e', 'baseSha..HEAD'],
+				['log', '--reverse', '--no-merges', '--format=%H%x00%s%x1e', 'baseSha..HEAD'],
 				expect.objectContaining({ cwd: '/path/to/repo' })
 			);
 		});

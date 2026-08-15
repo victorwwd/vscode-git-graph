@@ -54,8 +54,10 @@ function runPrompt(msgDir: string, msgPath: string): number {
 	while (Date.now() < deadline) {
 		if (fs.existsSync(responsePath)) {
 			// response.txt is a JSON envelope: { accepted: boolean, message: string }.
-			// accepted=true  -> write message to msgPath, exit 0 (git proceeds)
-			// accepted=false -> exit 1 (git aborts the rebase)
+			// The message is written and 0 returned in BOTH cases: accepted=false means
+			// "keep the original message" (message carries the default), and exiting
+			// non-zero would make git treat the editor as crashed and pause the rebase
+			// mid-flight in a state the UI cannot present accurately.
 			let raw: string;
 			try {
 				raw = fs.readFileSync(responsePath, 'utf8');
@@ -77,10 +79,6 @@ function runPrompt(msgDir: string, msgPath: string): number {
 			try { fs.unlinkSync(responsePath); } catch (_) { /* best-effort cleanup */ }
 			try { fs.unlinkSync(requestPath); } catch (_) { /* best-effort cleanup */ }
 			try { fs.unlinkSync(waitingPath); } catch (_) { /* host may already have consumed */ }
-			if (!parsed.accepted) {
-				process.stderr.write('rebaseEditor: user cancelled commit message prompt\n');
-				return 1;
-			}
 			try {
 				fs.writeFileSync(msgPath, parsed.message || '');
 			} catch (err) {

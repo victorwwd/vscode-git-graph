@@ -73,6 +73,14 @@
 	justify-content: flex-end;
 }
 
+.rebasePanel .rebasePanelError {
+	padding: 6px 12px;
+	border-top: 1px solid var(--vscode-panel-border, #444);
+	background: var(--vscode-inputValidation-errorBackground, #5a1d1d);
+	color: var(--vscode-inputValidation-errorForeground, #f48771);
+	font-size: 12px;
+}
+
 .rebasePanel button {
 	background: var(--vscode-button-background);
 	color: var(--vscode-button-foreground);

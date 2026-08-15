@@ -1332,7 +1332,9 @@ export class DataSource extends Disposable {
 	 * @returns The candidates in oldest-to-newest order, with any git error.
 	 */
 	public listRebaseCandidates(repo: string, base: string): Promise<{ candidates: RebaseCandidate[]; error: ErrorInfo }> {
-		const args = ['log', '--reverse', '--format=%H%x00%s%x1e', base + '..HEAD'];
+		// --no-merges: `pick` in a rebase todo cannot take merge commits — including
+		// them makes git abort the whole rebase while parsing the todo.
+		const args = ['log', '--reverse', '--no-merges', '--format=%H%x00%s%x1e', base + '..HEAD'];
 		return this.spawnGit(args, repo, (stdout) => stdout).then(
 			(stdout) => ({ candidates: this.parseRebaseCandidates(stdout), error: null }),
 			(error: string) => ({ candidates: [], error })

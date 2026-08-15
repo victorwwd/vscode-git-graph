@@ -115,6 +115,7 @@ export class RebaseSession {
 		if (status.state === RebaseLiveStateKind.Completed || status.state === RebaseLiveStateKind.Aborted) {
 			await this.state.clearRebaseSession(repo);
 			this.stopPromptWatcher(repo);
+			this.cleanupTmpDir(tmpDir);
 		}
 		return { error, status };
 	}
@@ -153,10 +154,6 @@ export class RebaseSession {
 				if (prep.error !== null) {
 					return { error: prep.error, status: await this.computeStatusAfterRun(repo, session, prep.error) };
 				}
-				if (prep.cancelled) {
-					this.logger.log('[rebase] AmendRewordContinue cancelled by user');
-					return { error: null, status: await this.computeStatusAfterRun(repo, session, null) };
-				}
 				error = await this.dataSource.rebaseAmendRewordContinue(repo, prep.msgPath, env);
 				break;
 			}
@@ -167,17 +164,20 @@ export class RebaseSession {
 				error = await this.dataSource.rebaseAbort(repo);
 				await this.state.clearRebaseSession(repo);
 				this.stopPromptWatcher(repo);
+				this.cleanupTmpDir(session.tmpDir);
 				return { error, status: this.idleStatus(session.origHead, false) };
 			case RebaseControlAction.Undo:
 				error = await this.dataSource.undoLastRebase(repo, session.origHead);
 				await this.state.clearRebaseSession(repo);
 				this.stopPromptWatcher(repo);
+				this.cleanupTmpDir(session.tmpDir);
 				return { error, status: this.idleStatus(null, false) };
 		}
 		const status = await this.computeStatusAfterRun(repo, session, error);
 		if (status.state === RebaseLiveStateKind.Completed || status.state === RebaseLiveStateKind.Aborted) {
 			await this.state.clearRebaseSession(repo);
 			this.stopPromptWatcher(repo);
+			this.cleanupTmpDir(session.tmpDir);
 		}
 		return { error, status };
 	}
@@ -193,8 +193,18 @@ export class RebaseSession {
 			this.dataSource.getWorkingTreeDirt(repo).catch(() => ({ worktreeDirty: false, indexDirty: false }))
 		]);
 		if (live.state === 'idle') {
-			if (session) await this.state.clearRebaseSession(repo);
+			if (session) {
+				await this.state.clearRebaseSession(repo);
+				this.cleanupTmpDir(session.tmpDir);
+			}
 			return this.idleStatus(session ? session.origHead : null, !!session);
+		}
+		// The prompt watcher is in-memory only; after an extension host restart the
+		// persisted session outlives it. Re-arm it here so a later Continue that
+		// invokes the message editor finds a host to answer its prompt — otherwise
+		// it would hang until the 10-minute timeout and fail the rebase step.
+		if (session && !this.promptWatchers[repo] && !this.promptPollers[repo]) {
+			this.startPromptWatcher(repo, session);
 		}
 		return this.toLiveStatus(repo, live as ActiveRebaseStatus, session ? session.origHead : null, dirt);
 	}
@@ -319,8 +329,11 @@ export class RebaseSession {
 
 		const { accepted, message } = await this.promptForMessage(repo, defaultMessage);
 		// response.txt is a JSON envelope so rebaseEditor can distinguish
-		// accept (write message, exit 0) from cancel (exit non-zero -> git aborts).
-		const response = JSON.stringify({ accepted, message: accepted ? message : '' });
+		// accept (write the edited message) from cancel (write defaultMessage
+		// unchanged — "Cancel keeps the original message" as the dialog promises;
+		// exiting non-zero would make git treat the editor as crashed and pause
+		// the rebase in an amend state the UI misreports as edit-stopped).
+		const response = JSON.stringify({ accepted, message: accepted ? message : defaultMessage });
 		this.logger.log('[rebase] prompt: writing response (accepted=' + accepted + ', bytes=' + response.length + ')');
 
 		// Atomic publish: write a sibling temp file then rename. fs.writeFileSync is not
@@ -341,13 +354,13 @@ export class RebaseSession {
 
 	/**
 	 * Ask the webview for a commit message. Resolves with what the user
-	 * submitted. If no webview is connected, resolves immediately as
-	 * "not accepted" so the caller falls back to the default.
+	 * submitted. If no webview is connected, resolves immediately with the
+	 * default message so git can proceed unchanged.
 	 */
 	private promptForMessage(repo: string, defaultMessage: string): Promise<{ accepted: boolean; message: string }> {
 		if (this.promptNotifier === null) {
 			this.logger.log('[rebase] prompt: no notifier registered; auto-confirming default message');
-			return Promise.resolve({ accepted: false, message: defaultMessage });
+			return Promise.resolve({ accepted: true, message: defaultMessage });
 		}
 		const promptId = 'rp-' + (this.nextPromptId++) + '-' + Date.now();
 		return new Promise((resolve) => {
@@ -362,7 +375,7 @@ export class RebaseSession {
 			} catch (err) {
 				this.logger.logError('[rebase] prompt: notifier threw: ' + (err as Error).message);
 				delete this.promptResolvers[promptId];
-				resolve({ accepted: false, message: defaultMessage });
+				resolve({ accepted: true, message: defaultMessage });
 			}
 		});
 	}
@@ -382,23 +395,34 @@ export class RebaseSession {
 	}
 
 	/**
+	 * Remove the session's temp directory (plan, prompt protocol files, editor log).
+	 * Best-effort: a locked file (antivirus, editor still exiting) is logged and
+	 * left behind rather than failing the rebase completion path.
+	 */
+	private cleanupTmpDir(tmpDir: string): void {
+		try {
+			fs.rmSync(tmpDir, { recursive: true, force: true });
+		} catch (err) {
+			this.logger.log('[rebase] tmpDir cleanup failed for ' + tmpDir + ': ' + (err as Error).message);
+		}
+	}
+
+	/**
 	 * Prepare a commit message file for the amend+reword flow. Reads HEAD's
 	 * current message, asks the webview for the new text, writes it to
 	 * `<tmpDir>/reword/COMMIT_EDITMSG`, and returns the path so the caller
-	 * can pass it to `git commit --amend -F <msgPath>`.
+	 * can pass it to `git commit --amend -F <msgPath>`. Cancelling the prompt
+	 * keeps the current message (as the dialog states) and still amends.
 	 */
-	private async prepareRewordMessage(repo: string, session: RebaseSessionState): Promise<{ error: ErrorInfo; msgPath: string; cancelled: boolean }> {
+	private async prepareRewordMessage(repo: string, session: RebaseSessionState): Promise<{ error: ErrorInfo; msgPath: string }> {
 		let current: string;
 		try {
 			current = await this.dataSource.getCommitMessage(repo, 'HEAD');
 		} catch (err) {
-			return { error: 'Failed to read current commit message: ' + (err as Error).message, msgPath: '', cancelled: false };
+			return { error: 'Failed to read current commit message: ' + (err as Error).message, msgPath: '' };
 		}
 
-		const { accepted, message } = await this.promptForMessage(repo, current);
-		if (!accepted) {
-			return { error: null, msgPath: '', cancelled: true };
-		}
+		const { message } = await this.promptForMessage(repo, current);
 
 		const rewordDir = path.join(session.tmpDir, 'reword');
 		const msgPath = path.join(rewordDir, 'COMMIT_EDITMSG');
@@ -406,10 +430,10 @@ export class RebaseSession {
 			fs.mkdirSync(rewordDir, { recursive: true });
 			fs.writeFileSync(msgPath, message);
 		} catch (err) {
-			return { error: 'Failed to stage commit message: ' + (err as Error).message, msgPath: '', cancelled: false };
+			return { error: 'Failed to stage commit message: ' + (err as Error).message, msgPath: '' };
 		}
 
-		return { error: null, msgPath, cancelled: false };
+		return { error: null, msgPath };
 	}
 
 	private buildEnv(tmpDir: string): NodeJS.ProcessEnv {

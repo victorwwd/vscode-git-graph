@@ -138,11 +138,28 @@ class RebasePanel {
 	}
 
 	private handleApply() {
+		// git rejects a todo whose first non-drop entry is squash/fixup ("cannot
+		// squash without a previous commit"), killing the rebase at startup.
+		// The plan is in display order (newest first), so the offending entry is the LAST one.
+		const lastApplied = [...this.plan].reverse().find((item) => item.action !== GG.RebaseAction.Drop);
+		if (lastApplied !== undefined && (lastApplied.action === GG.RebaseAction.Squash || lastApplied.action === GG.RebaseAction.Fixup)) {
+			this.showError('The last applied commit cannot be squashed or fixed up - there is no earlier commit to combine it with. Change it to pick, reword or edit, or reorder it.');
+			return;
+		}
 		if (this.callbacks !== null) {
 			// Plan is stored in display order (newest first); convert to git's natural
 			// rebase order (oldest first) before handing it off to the backend.
 			this.callbacks.onApply(this.plan.slice().reverse());
 		}
+	}
+
+	private showError(message: string) {
+		if (this.root === null) return;
+		this.root.querySelector('.rebasePanelError')?.remove();
+		const div = document.createElement('div');
+		div.className = 'rebasePanelError';
+		div.textContent = message;
+		this.root.insertBefore(div, this.root.querySelector('footer'));
 	}
 
 	private handleCancel() {
