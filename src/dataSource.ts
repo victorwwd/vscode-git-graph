@@ -46,6 +46,7 @@ export class DataSource extends Disposable {
 	private gitFormatCommitDetails!: string;
 	private gitFormatLog!: string;
 	private gitFormatStash!: string;
+	private gitBusyProbe: (() => boolean) | null = null;
 
 	/**
 	 * Creates the Git Graph Data Source.
@@ -84,6 +85,26 @@ export class DataSource extends Disposable {
 	 */
 	public isGitExecutableUnknown() {
 		return this.gitExecutable === null;
+	}
+
+	/**
+	 * Register a probe reporting whether a long-running git process owned by the
+	 * extension (e.g. an interactive rebase) is currently alive. While it
+	 * reports true, commands that read `.git/index` are deferred: on Windows a
+	 * concurrent `git status` can make the rebase's atomic index rename fail
+	 * with "Unable to write new index file".
+	 * @param probe The probe function (null to unregister).
+	 */
+	public setGitBusyProbe(probe: (() => boolean) | null): void {
+		this.gitBusyProbe = probe;
+	}
+
+	/**
+	 * Whether a probe-registered git process is running. Read-only commands
+	 * should use this to decide whether spawning now is safe.
+	 */
+	private isGitBusy(): boolean {
+		return this.gitBusyProbe !== null && this.gitBusyProbe();
 	}
 
 	/**
@@ -1480,6 +1501,27 @@ export class DataSource extends Disposable {
 	}
 
 	/**
+	 * Resolve once no probe-registered git process is running. Read commands that
+	 * touch `.git/index` call this before spawning, so they cannot collide with a
+	 * rebase's atomic index rename. Polls briefly; if the probe is still busy after
+	 * the deadline the caller proceeds anyway (staleness beats a hung UI).
+	 */
+	private waitForGitIdle(timeoutMs: number = 30000): Promise<void> {
+		if (!this.isGitBusy()) return Promise.resolve();
+		return new Promise<void>((resolve) => {
+			const deadline = Date.now() + timeoutMs;
+			const poll = () => {
+				if (!this.isGitBusy() || Date.now() >= deadline) {
+					resolve();
+					return;
+				}
+				setTimeout(poll, 100);
+			};
+			setTimeout(poll, 100);
+		});
+	}
+
+	/**
 	 * Whether the working tree (and index) has no uncommitted changes.
 	 * `git diff --quiet` exits 0 when clean and 1 when dirty; we map that exit code to a boolean.
 	 */
@@ -1493,7 +1535,7 @@ export class DataSource extends Disposable {
 	 */
 	public getWorkingTreeDirt(repo: string): Promise<{ worktreeDirty: boolean; indexDirty: boolean }> {
 		const probe = (args: string[]) =>
-			this._spawnGit(args, repo, () => true).then(
+			this.waitForGitIdle().then(() => this._spawnGit(args, repo, () => true)).then(
 				() => false,
 				() => true
 			);
@@ -2548,10 +2590,12 @@ export class DataSource extends Disposable {
 	 * @returns The number of uncommitted changes.
 	 */
 	private getUncommittedChanges(repo: string) {
-		return this.spawnGit(['status', '--untracked-files=' + (getConfig().showUntrackedFiles ? 'all' : 'no'), '--porcelain'], repo, (stdout) => {
+		// `git status` refreshes stat info in `.git/index`; during an active rebase
+		// it can break the rebase's index rename on Windows — wait for idle first.
+		return this.waitForGitIdle().then(() => this.spawnGit(['status', '--untracked-files=' + (getConfig().showUntrackedFiles ? 'all' : 'no'), '--porcelain'], repo, (stdout) => {
 			const numLines = stdout.split(EOL_REGEX).length;
 			return numLines > 1 ? numLines - 1 : 0;
-		});
+		}));
 	}
 
 	/**

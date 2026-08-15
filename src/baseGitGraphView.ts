@@ -64,8 +64,17 @@ export abstract class BaseGitGraphView extends Disposable {
 		this.logger = logger;
 		this.loadViewTo = loadViewTo;
 
-		// Instantiate a RepoFileWatcher that watches for file changes in the repository currently open in the Git Graph View
+		// Instantiate a RepoFileWatcher that watches for file changes in the repository currently open in the Git Graph View.
+		// While a rebase child process is alive, suppress refreshes: each one spawns
+		// git read commands, and a `git status` racing the rebase's index rename
+		// fails the step ("Unable to write new index file"). This guard is
+		// per-instance on purpose — EVERY view instance applies it, closing the
+		// gap where a non-handling view refreshed mid-rebase.
 		this.repoFileWatcher = new RepoFileWatcher(logger, () => {
+			if (this.rebaseSession.isGitBusy()) {
+				this.logger.log('[rebase] refresh suppressed: rebase child process is running');
+				return;
+			}
 			if (this.isVisible) {
 				this.sendMessage({ command: 'refresh' });
 			}

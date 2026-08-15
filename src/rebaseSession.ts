@@ -41,12 +41,39 @@ export class RebaseSession {
 	private promptNotifier: ((message: ResponseRebasePrompt) => void) | null = null;
 	private promptResolvers: { [promptId: string]: (response: { accepted: boolean; message: string }) => void } = {};
 	private nextPromptId: number = 1;
+	private gitBusyCount: number = 0;
 
 	constructor(dataSource: DataSource, state: ExtensionState, extensionPath: string, logger: Logger) {
 		this.dataSource = dataSource;
 		this.state = state;
 		this.extensionPath = extensionPath;
 		this.logger = logger;
+	}
+
+	/**
+	 * Whether a `git rebase` child process owned by this session is currently
+	 * running. While true, other Git Graph components must not spawn git
+	 * commands that touch `.git/index` (e.g. `git status`): on Windows the
+	 * rebase atomically renames index.lock -> index, and a concurrent reader
+	 * without FILE_SHARE_DELETE makes that rename fail with "Unable to write
+	 * new index file", killing the rebase step mid-flight.
+	 */
+	public isGitBusy(): boolean {
+		return this.gitBusyCount > 0;
+	}
+
+	/**
+	 * Mark the window in which this session has a git rebase child process
+	 * alive. Nested/drive-by calls are counted so overlapping windows resolve
+	 * only when the outermost one ends.
+	 */
+	private async withGitBusy<T>(run: () => Promise<T>): Promise<T> {
+		this.gitBusyCount++;
+		try {
+			return await run();
+		} finally {
+			this.gitBusyCount--;
+		}
 	}
 
 	/**
@@ -110,7 +137,7 @@ export class RebaseSession {
 		this.startPromptWatcher(repo, session);
 
 		const env = this.buildEnv(tmpDir);
-		const error = await this.dataSource.startInteractiveRebase(repo, base, env);
+		const error = await this.withGitBusy(() => this.dataSource.startInteractiveRebase(repo, base, env));
 		const status = await this.computeStatusAfterRun(repo, session, error);
 		if (status.state === RebaseLiveStateKind.Completed || status.state === RebaseLiveStateKind.Aborted) {
 			await this.state.clearRebaseSession(repo);
@@ -144,30 +171,30 @@ export class RebaseSession {
 		let error: ErrorInfo = null;
 		switch (action) {
 			case RebaseControlAction.Continue:
-				error = await this.dataSource.rebaseContinue(repo, env);
+				error = await this.withGitBusy(() => this.dataSource.rebaseContinue(repo, env));
 				break;
 			case RebaseControlAction.AmendContinue:
-				error = await this.dataSource.rebaseAmendContinue(repo, env);
+				error = await this.withGitBusy(() => this.dataSource.rebaseAmendContinue(repo, env));
 				break;
 			case RebaseControlAction.AmendRewordContinue: {
 				const prep = await this.prepareRewordMessage(repo, session);
 				if (prep.error !== null) {
 					return { error: prep.error, status: await this.computeStatusAfterRun(repo, session, prep.error) };
 				}
-				error = await this.dataSource.rebaseAmendRewordContinue(repo, prep.msgPath, env);
+				error = await this.withGitBusy(() => this.dataSource.rebaseAmendRewordContinue(repo, prep.msgPath, env));
 				break;
 			}
 			case RebaseControlAction.Skip:
-				error = await this.dataSource.rebaseSkip(repo);
+				error = await this.withGitBusy(() => this.dataSource.rebaseSkip(repo));
 				break;
 			case RebaseControlAction.Abort:
-				error = await this.dataSource.rebaseAbort(repo);
+				error = await this.withGitBusy(() => this.dataSource.rebaseAbort(repo));
 				await this.state.clearRebaseSession(repo);
 				this.stopPromptWatcher(repo);
 				this.cleanupTmpDir(session.tmpDir);
 				return { error, status: this.idleStatus(session.origHead, false) };
 			case RebaseControlAction.Undo:
-				error = await this.dataSource.undoLastRebase(repo, session.origHead);
+				error = await this.withGitBusy(() => this.dataSource.undoLastRebase(repo, session.origHead));
 				await this.state.clearRebaseSession(repo);
 				this.stopPromptWatcher(repo);
 				this.cleanupTmpDir(session.tmpDir);

@@ -45,6 +45,9 @@ export async function activate(context: vscode.ExtensionContext) {
 	const avatarManager = new AvatarManager(dataSource, extensionState, logger);
 	const repoManager = new RepoManager(dataSource, extensionState, onDidChangeConfiguration, logger);
 	const rebaseSession = new RebaseSession(dataSource, extensionState, context.extensionPath, logger);
+	// While a rebase child process is alive, DataSource defers git commands that
+	// read .git/index (see DataSource.setGitBusyProbe for why).
+	dataSource.setGitBusyProbe(() => rebaseSession.isGitBusy());
 	const statusBarItem = new StatusBarItem(repoManager.getNumRepos(), repoManager.onDidChangeRepos, onDidChangeConfiguration, logger);
 	const commandManager = new CommandManager(context, avatarManager, dataSource, extensionState, repoManager, rebaseSession, gitExecutable, onDidChangeGitExecutable, logger);
 	const diffDocProvider = new DiffDocProvider(dataSource);

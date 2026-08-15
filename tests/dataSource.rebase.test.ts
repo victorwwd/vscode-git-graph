@@ -477,6 +477,26 @@ describe('DataSource - Interactive Rebase', () => {
 			// Assert
 			expect(result).toBe(false);
 		});
+
+		it('defers diff probes until the git busy probe reports idle', async () => {
+			// Setup: a rebase child process is alive for the first poll window
+			let busy = true;
+			dataSource.setGitBusyProbe(() => busy);
+			mockGitSuccessOnce();
+			mockGitSuccessOnce();
+
+			// Run
+			const resultPromise = dataSource.isWorkingTreeClean('/path/to/repo');
+			// No git spawn should happen while busy
+			await new Promise((resolve) => setTimeout(resolve, 150));
+			expect(spyOnSpawn).not.toHaveBeenCalled();
+			busy = false;
+
+			// Assert
+			const result = await resultPromise;
+			expect(result).toBe(true);
+			expect(spyOnSpawn).toHaveBeenCalled();
+		});
 	});
 
 	describe('isDetachedHead', () => {

@@ -259,3 +259,43 @@ describe('RebaseSession.query', () => {
 		expect(fsMock.rmSync).toHaveBeenCalledWith('/t', { recursive: true, force: true });
 	});
 });
+
+describe('RebaseSession.isGitBusy', () => {
+	it('is true only while a rebase child process is running', async () => {
+		const { session, dataSource, state } = makeMocks();
+		state.getRebaseSession.mockReturnValue({
+			repo: '/repo', base: 'b', origHead: 'origHead123', plan: samplePlan, tmpDir: '/t', startedAt: 0
+		});
+		dataSource.getRebaseStatus.mockResolvedValue({ state: 'idle', progress: null, conflicts: [] });
+
+		let busyDuringRun: boolean[] = [];
+		dataSource.rebaseContinue.mockImplementation(async () => {
+			busyDuringRun.push(session.isGitBusy());
+			return null;
+		});
+
+		expect(session.isGitBusy()).toBe(false);
+		await session.control('/repo', RebaseControlAction.Continue);
+		expect(session.isGitBusy()).toBe(false);
+		expect(busyDuringRun).toEqual([true]);
+	});
+
+	it('reports busy across overlapping control windows', async () => {
+		const { session, dataSource, state } = makeMocks();
+		state.getRebaseSession.mockReturnValue({
+			repo: '/repo', base: 'b', origHead: 'origHead123', plan: samplePlan, tmpDir: '/t', startedAt: 0
+		});
+		dataSource.getRebaseStatus.mockResolvedValue({ state: 'idle', progress: null, conflicts: [] });
+
+		let busyDuringInner: boolean | null = null;
+		dataSource.rebaseContinue.mockImplementation(async () => {
+			// Simulate an overlapping read window (e.g. a status probe that started
+			// before busy was set) checking the flag mid-flight.
+			busyDuringInner = session.isGitBusy();
+			return null;
+		});
+
+		await session.control('/repo', RebaseControlAction.Continue);
+		expect(busyDuringInner).toBe(true);
+	});
+});
