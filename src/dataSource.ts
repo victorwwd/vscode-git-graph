@@ -1135,6 +1135,24 @@ export class DataSource extends Disposable {
 	}
 
 
+
+	/**
+	 * Push commits up to and including the specified commit to the remote tracking branch.
+	 * Uses a '<sha>:refs/heads/<branch>' refspec so only the prefix of the branch is pushed.
+	 * In Normal mode git itself rejects the push with a non-fast-forward error when the
+	 * remote branch has diverged - no separate ancestry pre-check is needed.
+	 * @param repo The path of the repository.
+	 * @param commitHash The commit to push up to.
+	 * @param branchName The local branch whose commits are being pushed.
+	 * @param remote The remote to push to.
+	 * @returns The ErrorInfo from the executed command.
+	 */
+	public pushToCommit(repo: string, commitHash: string, branchName: string, remote: string, mode: GitPushBranchMode) {
+		let args = ['push', remote, commitHash + ':refs/heads/' + branchName];
+		if (mode !== GitPushBranchMode.Normal) args.push('--' + mode);
+		return this.runGitCommand(args, repo);
+	}
+
 	/* Git Action Methods - Branches */
 
 	/**

@@ -291,6 +291,10 @@
 								"interactiveRebaseFromHere": {
 									"type": "boolean",
 									"title": "Interactive Rebase from here..."
+								},
+								"push": {
+									"type": "boolean",
+									"title": "Push to Here..."
 								}
 							}
 						},

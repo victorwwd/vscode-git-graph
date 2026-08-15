@@ -410,6 +410,7 @@ export interface ContextMenuActionsVisibility {
 		readonly copySubject: boolean;
 		readonly generatePatch: boolean;
 		readonly interactiveRebaseFromHere: boolean;
+		readonly push: boolean;
 	};
 	readonly commitDetailsViewFile: {
 		readonly viewDiff: boolean;
@@ -1327,6 +1328,17 @@ export interface ResponsePushStash extends ResponseWithErrorInfo {
 	readonly command: 'pushStash';
 }
 
+export interface RequestPushToCommit extends RepoRequest {
+	readonly command: 'pushToCommit';
+	readonly commitHash: string;
+	readonly branchName: string;
+	readonly remote: string;
+	readonly mode: GitPushBranchMode;
+}
+export interface ResponsePushToCommit extends ResponseWithErrorInfo {
+	readonly command: 'pushToCommit';
+}
+
 export interface RequestPushTag extends RepoRequest {
 	readonly command: 'pushTag';
 	readonly tagName: string;
@@ -1715,6 +1727,7 @@ export type RequestMessage =
 	| RequestPushBranch
 	| RequestPushStash
 	| RequestPushTag
+	| RequestPushToCommit
 	| RequestRebase
 	| RequestRebaseControl
 	| RequestRebaseList
@@ -1804,6 +1817,7 @@ export type ResponseMessage =
 	| ResponsePushBranch
 	| ResponsePushStash
 	| ResponsePushTag
+	| ResponsePushToCommit
 	| ResponseRebase
 	| ResponseRebaseControl
 	| ResponseRebaseList

@@ -696,6 +696,12 @@ export abstract class BaseGitGraphView extends Disposable {
 					errors: await this.dataSource.pushBranchToMultipleRemotes(msg.repo, msg.branchName, msg.remotes, msg.setUpstream, msg.mode, msg.noVerify)
 				});
 				break;
+			case 'pushToCommit':
+				this.sendMessage({
+					command: 'pushToCommit',
+					error: await this.dataSource.pushToCommit(msg.repo, msg.commitHash, msg.branchName, msg.remote, msg.mode)
+				});
+				break;
 			case 'pushStash':
 				this.sendMessage({
 					command: 'pushStash',

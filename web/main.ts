@@ -687,6 +687,42 @@ class GitGraphView {
 	}
 
 	/**
+	 * Check whether 'Push to Here' should be offered for a commit: it must be an
+	 * unpushed ancestor of the current branch head (i.e. after the remote tracking tip),
+	 * the branch must track a remote, and at least one remote must exist.
+	 */
+	private canPushToCommit(hash: string): boolean {
+		if (this.gitRemotes.length === 0 || this.gitBranchHead === null) return false;
+		const remote = this.getRemoteForBranch(this.gitBranchHead);
+		if (remote === null) return false;
+		const remoteRef = 'remotes/' + remote + '/' + this.gitBranchHead;
+		const commit = this.commits[this.commitLookup[hash]];
+		if (commit === undefined) return false;
+		const alreadyPushed = commit.remotes.some((r) => r.name === remoteRef);
+		if (alreadyPushed) return false;
+		// The commit must be an ancestor of the current branch head
+		let current = -1;
+		for (let i = 0; i < this.commits.length; i++) {
+			if (this.commits[i].heads && this.commits[i].heads.includes(this.gitBranchHead)) { current = i; break; }
+		}
+		if (current === -1) return false;
+		const onBranch = new Set<string>();
+		const queue = [current];
+		while (queue.length > 0) {
+			const i = queue.shift()!;
+			const c = this.commits[i];
+			if (onBranch.has(c.hash)) continue;
+			onBranch.add(c.hash);
+			for (const parentHash of c.parents) {
+				const pi = this.commitLookup[parentHash];
+				if (pi !== undefined) queue.push(pi);
+			}
+		}
+		return onBranch.has(hash);
+	}
+
+
+	/**
 	 * Get the remote that the specified branch is tracking.
 	 * @param branchName - The name of the branch to get the tracking remote for
 	 * @returns The name of the remote the branch is tracking, or null if not tracking any remote
@@ -2110,6 +2146,28 @@ class GitGraphView {
 				title: 'Rebase current Branch on this Commit' + ELLIPSIS,
 				visible: visibility.rebase,
 				onClick: () => this.rebaseAction(hash, abbrevCommit(hash), GG.RebaseActionOn.Commit, target)
+			}, {
+				title: 'Push to Here' + ELLIPSIS,
+				visible: visibility.push && this.canPushToCommit(hash),
+				onClick: () => {
+					const branchName = this.gitBranchHead!;
+					const remote = this.getRemoteForBranch(branchName);
+					dialog.showForm('Are you sure you want to push the commits up to and including <b><i>' + abbrevCommit(hash) + '</i></b> to <b><i>' + escapeHtml(remote + '/' + branchName) + '</i></b>? Commits after this one will not be pushed.', [
+						{
+							type: DialogInputType.Radio,
+							name: 'Push Mode',
+							options: [
+								{ name: 'Normal', value: GG.GitPushBranchMode.Normal },
+								{ name: 'Force With Lease', value: GG.GitPushBranchMode.ForceWithLease },
+								{ name: 'Force', value: GG.GitPushBranchMode.Force }
+							],
+							default: GG.GitPushBranchMode.Normal
+						}
+					], 'Yes, push', (values) => {
+						runAction({ command: 'pushToCommit', repo: this.currentRepo, commitHash: hash, branchName: branchName, remote: remote!, mode: <GG.GitPushBranchMode>values[0] }, 'Pushing Commits');
+					}, target);
+				}
+
 			}, {
 				title: 'Interactive Rebase from here' + ELLIPSIS,
 				visible: visibility.interactiveRebaseFromHere,
@@ -4874,6 +4932,9 @@ window.addEventListener('load', () => {
 				break;
 			case 'pushBranch':
 				refreshAndDisplayErrors(msg.errors, 'Unable to Push Branch', msg.willUpdateBranchConfig);
+				break;
+			case 'pushToCommit':
+				refreshOrDisplayError(msg.error, 'Unable to Push to Commit');
 				break;
 			case 'pushStash':
 				refreshOrDisplayError(msg.error, 'Unable to Stash Uncommitted Changes');

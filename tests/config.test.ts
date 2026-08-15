@@ -328,7 +328,8 @@ describe('Config', () => {
 					copyHash: true,
 					copySubject: true,
 					generatePatch: true,
-					interactiveRebaseFromHere: true
+					interactiveRebaseFromHere: true,
+					push: true
 				},
 				commitDetailsViewFile: {
 					viewDiff: true,
@@ -428,7 +429,8 @@ describe('Config', () => {
 					copyHash: true,
 					copySubject: true,
 					generatePatch: true,
-					interactiveRebaseFromHere: true
+					interactiveRebaseFromHere: true,
+					push: true
 				},
 				commitDetailsViewFile: {
 					viewDiff: true,
@@ -546,7 +548,8 @@ describe('Config', () => {
 					copyHash: true,
 					copySubject: true,
 					generatePatch: true,
-					interactiveRebaseFromHere: true
+					interactiveRebaseFromHere: true,
+					push: true
 				},
 				commitDetailsViewFile: {
 					viewDiff: true,
