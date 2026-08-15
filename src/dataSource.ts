@@ -2503,6 +2503,16 @@ export class DataSource extends Disposable {
 	 * @returns An array of stashes.
 	 */
 	private getStashes(repo: string) {
+		// Repositories without a single stash have no refs/stash; probing it
+		// with reflog would log an "exit 128: bad revision" error on every
+		// refresh. Probe first (ignoreExitCode: a missing ref exits 128 with
+		// empty stdout) and skip the reflog when there is nothing to list.
+		return this._spawnGit(['show-ref', '--verify', 'refs/stash'], repo, (stdout) => stdout.length > 0, true)
+			.then((valid) => valid ? this.getStashesReflog(repo) : [])
+			.catch(() => []);
+	}
+
+	private getStashesReflog(repo: string) {
 		return this.spawnGit(['reflog', '--format=' + this.gitFormatStash, 'refs/stash', '--'], repo, (stdout) => {
 			let lines = stdout.split(EOL_REGEX);
 			let stashes: GitStash[] = [];

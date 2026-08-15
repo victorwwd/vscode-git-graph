@@ -156,11 +156,12 @@ describe('DataSource', () => {
 				'  remotes/origin/master\n'
 			);
 			mockGitSuccessOnce('origin\n');
+			mockGitSuccessOnce('98adab72e57a098a45cc36e43a6c0fda95c44f8b refs/stash\n');
+			mockGitSuccessOnce('');
 			mockGitSuccessOnce(
 				'98adab72e57a098a45cc36e43a6c0fda95c44f8bXX7Nal-YARtTpjCikii9nJxER19D6diSyk-AWkPbb30d6d4d14462e09515df02a8635e83b4278c8b1 26970361eca306caa6d6bed3baf022dbd8fa404cXX7Nal-YARtTpjCikii9nJxER19D6diSyk-AWkPbrefs/stash@{0}XX7Nal-YARtTpjCikii9nJxER19D6diSyk-AWkPbTest AuthorXX7Nal-YARtTpjCikii9nJxER19D6diSyk-AWkPbtest@mhutchie.comXX7Nal-YARtTpjCikii9nJxER19D6diSyk-AWkPb1592306634XX7Nal-YARtTpjCikii9nJxER19D6diSyk-AWkPbWIP on develop: b30d6d4 y\n' +
 				'0fc3e571c275213de2b3bca9c85e852323056121XX7Nal-YARtTpjCikii9nJxER19D6diSyk-AWkPb9157723d0856bd828800ff185ee72658ee51d19f d45009bc4224537e97b0e52883ea7ae657928fcf 9d81ce0a6cf64b6651bacd7a6c3a6ca90fd63235XX7Nal-YARtTpjCikii9nJxER19D6diSyk-AWkPbrefs/stash@{1}XX7Nal-YARtTpjCikii9nJxER19D6diSyk-AWkPbTest AuthorXX7Nal-YARtTpjCikii9nJxER19D6diSyk-AWkPbtest@mhutchie.comXX7Nal-YARtTpjCikii9nJxER19D6diSyk-AWkPb1592135134XX7Nal-YARtTpjCikii9nJxER19D6diSyk-AWkPbWIP on master: 9157723 y\n'
 			);
-			mockGitSuccessOnce('');
 			vscode.mockExtensionSettingReturnValue('repository.showRemoteHeads', true);
 
 			// Run
@@ -198,7 +199,7 @@ describe('DataSource', () => {
 			});
 			expect(spyOnSpawn).toBeCalledWith('/path/to/git', ['branch', '-a', '--no-color'], expect.objectContaining({ cwd: '/path/to/repo' }));
 			expect(spyOnSpawn).toBeCalledWith('/path/to/git', ['remote'], expect.objectContaining({ cwd: '/path/to/repo' }));
-			expect(spyOnSpawn).toBeCalledWith('/path/to/git', ['reflog', '--format=%HXX7Nal-YARtTpjCikii9nJxER19D6diSyk-AWkPb%PXX7Nal-YARtTpjCikii9nJxER19D6diSyk-AWkPb%gDXX7Nal-YARtTpjCikii9nJxER19D6diSyk-AWkPb%anXX7Nal-YARtTpjCikii9nJxER19D6diSyk-AWkPb%aeXX7Nal-YARtTpjCikii9nJxER19D6diSyk-AWkPb%atXX7Nal-YARtTpjCikii9nJxER19D6diSyk-AWkPb%s', 'refs/stash', '--'], expect.objectContaining({ cwd: '/path/to/repo' }));
+			expect(spyOnSpawn).toBeCalledWith('/path/to/git', ['show-ref', '--verify', 'refs/stash'], expect.objectContaining({ cwd: '/path/to/repo' }));
 			expect(spyOnSpawn).toBeCalledWith('/path/to/git', ['tag', '--list', '--sort=-creatordate'], expect.objectContaining({ cwd: '/path/to/repo' }));
 		});
 
@@ -209,7 +210,7 @@ describe('DataSource', () => {
 				'  master\n'
 			);
 			mockGitSuccessOnce('origin\n');
-			mockGitSuccessOnce('\n');
+			mockGitSuccessOnce(''); // show-ref probe: refs/stash absent
 			mockGitSuccessOnce('');
 			vscode.mockExtensionSettingReturnValue('repository.showRemoteHeads', true);
 
@@ -227,7 +228,7 @@ describe('DataSource', () => {
 			});
 			expect(spyOnSpawn).toBeCalledWith('/path/to/git', ['branch', '--no-color'], expect.objectContaining({ cwd: '/path/to/repo' }));
 			expect(spyOnSpawn).toBeCalledWith('/path/to/git', ['remote'], expect.objectContaining({ cwd: '/path/to/repo' }));
-			expect(spyOnSpawn).toBeCalledWith('/path/to/git', ['reflog', '--format=%HXX7Nal-YARtTpjCikii9nJxER19D6diSyk-AWkPb%PXX7Nal-YARtTpjCikii9nJxER19D6diSyk-AWkPb%gDXX7Nal-YARtTpjCikii9nJxER19D6diSyk-AWkPb%anXX7Nal-YARtTpjCikii9nJxER19D6diSyk-AWkPb%aeXX7Nal-YARtTpjCikii9nJxER19D6diSyk-AWkPb%atXX7Nal-YARtTpjCikii9nJxER19D6diSyk-AWkPb%s', 'refs/stash', '--'], expect.objectContaining({ cwd: '/path/to/repo' }));
+			expect(spyOnSpawn).toBeCalledWith('/path/to/git', ['show-ref', '--verify', 'refs/stash'], expect.objectContaining({ cwd: '/path/to/repo' }));
 		});
 
 		it('Should return the repository info (using git-graph.date.type)', async () => {
@@ -237,7 +238,7 @@ describe('DataSource', () => {
 				'  master\n'
 			);
 			mockGitSuccessOnce('origin\n');
-			mockGitSuccessOnce('\n');
+			mockGitSuccessOnce(''); // show-ref probe: refs/stash absent
 			mockGitSuccessOnce('');
 			vscode.mockExtensionSettingReturnValue('repository.showRemoteHeads', true);
 			vscode.mockExtensionSettingReturnValue('date.type', 'Commit Date');
@@ -261,7 +262,7 @@ describe('DataSource', () => {
 			});
 			expect(spyOnSpawn).toBeCalledWith('/path/to/git', ['branch', '--no-color'], expect.objectContaining({ cwd: '/path/to/repo' }));
 			expect(spyOnSpawn).toBeCalledWith('/path/to/git', ['remote'], expect.objectContaining({ cwd: '/path/to/repo' }));
-			expect(spyOnSpawn).toBeCalledWith('/path/to/git', ['reflog', '--format=%HXX7Nal-YARtTpjCikii9nJxER19D6diSyk-AWkPb%PXX7Nal-YARtTpjCikii9nJxER19D6diSyk-AWkPb%gDXX7Nal-YARtTpjCikii9nJxER19D6diSyk-AWkPb%anXX7Nal-YARtTpjCikii9nJxER19D6diSyk-AWkPb%aeXX7Nal-YARtTpjCikii9nJxER19D6diSyk-AWkPb%ctXX7Nal-YARtTpjCikii9nJxER19D6diSyk-AWkPb%s', 'refs/stash', '--'], expect.objectContaining({ cwd: '/path/to/repo' }));
+			expect(spyOnSpawn).toBeCalledWith('/path/to/git', ['show-ref', '--verify', 'refs/stash'], expect.objectContaining({ cwd: '/path/to/repo' }));
 		});
 
 		it('Should return the repository info (using git-graph.dateType)', async () => {
@@ -271,7 +272,7 @@ describe('DataSource', () => {
 				'  master\n'
 			);
 			mockGitSuccessOnce('origin\n');
-			mockGitSuccessOnce('\n');
+			mockGitSuccessOnce(''); // show-ref probe: refs/stash absent
 			mockGitSuccessOnce('');
 			vscode.mockExtensionSettingReturnValue('repository.showRemoteHeads', true);
 			vscode.mockExtensionSettingReturnValue('date.type', 'Commit Date');
@@ -295,7 +296,7 @@ describe('DataSource', () => {
 			});
 			expect(spyOnSpawn).toBeCalledWith('/path/to/git', ['branch', '--no-color'], expect.objectContaining({ cwd: '/path/to/repo' }));
 			expect(spyOnSpawn).toBeCalledWith('/path/to/git', ['remote'], expect.objectContaining({ cwd: '/path/to/repo' }));
-			expect(spyOnSpawn).toBeCalledWith('/path/to/git', ['reflog', '--format=%HXX7Nal-YARtTpjCikii9nJxER19D6diSyk-AWkPb%PXX7Nal-YARtTpjCikii9nJxER19D6diSyk-AWkPb%gDXX7Nal-YARtTpjCikii9nJxER19D6diSyk-AWkPb%anXX7Nal-YARtTpjCikii9nJxER19D6diSyk-AWkPb%aeXX7Nal-YARtTpjCikii9nJxER19D6diSyk-AWkPb%ctXX7Nal-YARtTpjCikii9nJxER19D6diSyk-AWkPb%s', 'refs/stash', '--'], expect.objectContaining({ cwd: '/path/to/repo' }));
+			expect(spyOnSpawn).toBeCalledWith('/path/to/git', ['show-ref', '--verify', 'refs/stash'], expect.objectContaining({ cwd: '/path/to/repo' }));
 		});
 
 		it('Should return the repository info (using git-graph.repository.useMailmap)', async () => {
@@ -305,7 +306,7 @@ describe('DataSource', () => {
 				'  master\n'
 			);
 			mockGitSuccessOnce('origin\n');
-			mockGitSuccessOnce('\n');
+			mockGitSuccessOnce(''); // show-ref probe: refs/stash absent
 			mockGitSuccessOnce('');
 			vscode.mockExtensionSettingReturnValue('repository.showRemoteHeads', true);
 			vscode.mockExtensionSettingReturnValue('date.type', 'Author Date');
@@ -329,7 +330,7 @@ describe('DataSource', () => {
 			});
 			expect(spyOnSpawn).toBeCalledWith('/path/to/git', ['branch', '--no-color'], expect.objectContaining({ cwd: '/path/to/repo' }));
 			expect(spyOnSpawn).toBeCalledWith('/path/to/git', ['remote'], expect.objectContaining({ cwd: '/path/to/repo' }));
-			expect(spyOnSpawn).toBeCalledWith('/path/to/git', ['reflog', '--format=%HXX7Nal-YARtTpjCikii9nJxER19D6diSyk-AWkPb%PXX7Nal-YARtTpjCikii9nJxER19D6diSyk-AWkPb%gDXX7Nal-YARtTpjCikii9nJxER19D6diSyk-AWkPb%aNXX7Nal-YARtTpjCikii9nJxER19D6diSyk-AWkPb%aEXX7Nal-YARtTpjCikii9nJxER19D6diSyk-AWkPb%atXX7Nal-YARtTpjCikii9nJxER19D6diSyk-AWkPb%s', 'refs/stash', '--'], expect.objectContaining({ cwd: '/path/to/repo' }));
+			expect(spyOnSpawn).toBeCalledWith('/path/to/git', ['show-ref', '--verify', 'refs/stash'], expect.objectContaining({ cwd: '/path/to/repo' }));
 		});
 
 		it('Should return the repository info (using git-graph.useMailmap)', async () => {
@@ -339,7 +340,7 @@ describe('DataSource', () => {
 				'  master\n'
 			);
 			mockGitSuccessOnce('origin\n');
-			mockGitSuccessOnce('\n');
+			mockGitSuccessOnce(''); // show-ref probe: refs/stash absent
 			mockGitSuccessOnce('');
 			vscode.mockExtensionSettingReturnValue('repository.showRemoteHeads', true);
 			vscode.mockExtensionSettingReturnValue('date.type', 'Author Date');
@@ -363,7 +364,7 @@ describe('DataSource', () => {
 			});
 			expect(spyOnSpawn).toBeCalledWith('/path/to/git', ['branch', '--no-color'], expect.objectContaining({ cwd: '/path/to/repo' }));
 			expect(spyOnSpawn).toBeCalledWith('/path/to/git', ['remote'], expect.objectContaining({ cwd: '/path/to/repo' }));
-			expect(spyOnSpawn).toBeCalledWith('/path/to/git', ['reflog', '--format=%HXX7Nal-YARtTpjCikii9nJxER19D6diSyk-AWkPb%PXX7Nal-YARtTpjCikii9nJxER19D6diSyk-AWkPb%gDXX7Nal-YARtTpjCikii9nJxER19D6diSyk-AWkPb%aNXX7Nal-YARtTpjCikii9nJxER19D6diSyk-AWkPb%aEXX7Nal-YARtTpjCikii9nJxER19D6diSyk-AWkPb%atXX7Nal-YARtTpjCikii9nJxER19D6diSyk-AWkPb%s', 'refs/stash', '--'], expect.objectContaining({ cwd: '/path/to/repo' }));
+			expect(spyOnSpawn).toBeCalledWith('/path/to/git', ['show-ref', '--verify', 'refs/stash'], expect.objectContaining({ cwd: '/path/to/repo' }));
 		});
 
 		it('Should return the repository info (showStashes is FALSE)', async () => {
@@ -403,7 +404,7 @@ describe('DataSource', () => {
 				'  remotes/origin/master\n'
 			);
 			mockGitSuccessOnce('origin\n');
-			mockGitSuccessOnce('\n');
+			mockGitSuccessOnce(''); // show-ref probe: refs/stash absent
 			mockGitSuccessOnce('');
 			vscode.mockExtensionSettingReturnValue('repository.showRemoteHeads', true);
 
@@ -421,7 +422,7 @@ describe('DataSource', () => {
 			});
 			expect(spyOnSpawn).toBeCalledWith('/path/to/git', ['branch', '-a', '--no-color'], expect.objectContaining({ cwd: '/path/to/repo' }));
 			expect(spyOnSpawn).toBeCalledWith('/path/to/git', ['remote'], expect.objectContaining({ cwd: '/path/to/repo' }));
-			expect(spyOnSpawn).toBeCalledWith('/path/to/git', ['reflog', '--format=%HXX7Nal-YARtTpjCikii9nJxER19D6diSyk-AWkPb%PXX7Nal-YARtTpjCikii9nJxER19D6diSyk-AWkPb%gDXX7Nal-YARtTpjCikii9nJxER19D6diSyk-AWkPb%anXX7Nal-YARtTpjCikii9nJxER19D6diSyk-AWkPb%aeXX7Nal-YARtTpjCikii9nJxER19D6diSyk-AWkPb%atXX7Nal-YARtTpjCikii9nJxER19D6diSyk-AWkPb%s', 'refs/stash', '--'], expect.objectContaining({ cwd: '/path/to/repo' }));
+			expect(spyOnSpawn).toBeCalledWith('/path/to/git', ['show-ref', '--verify', 'refs/stash'], expect.objectContaining({ cwd: '/path/to/repo' }));
 		});
 
 		it('Should return the repository info (excluding remote heads)', async () => {
@@ -434,7 +435,7 @@ describe('DataSource', () => {
 				'  remotes/origin/master\n'
 			);
 			mockGitSuccessOnce('origin\n');
-			mockGitSuccessOnce('\n');
+			mockGitSuccessOnce(''); // show-ref probe: refs/stash absent
 			mockGitSuccessOnce('');
 			vscode.mockExtensionSettingReturnValue('repository.showRemoteHeads', false);
 
@@ -452,14 +453,14 @@ describe('DataSource', () => {
 			});
 			expect(spyOnSpawn).toBeCalledWith('/path/to/git', ['branch', '-a', '--no-color'], expect.objectContaining({ cwd: '/path/to/repo' }));
 			expect(spyOnSpawn).toBeCalledWith('/path/to/git', ['remote'], expect.objectContaining({ cwd: '/path/to/repo' }));
-			expect(spyOnSpawn).toBeCalledWith('/path/to/git', ['reflog', '--format=%HXX7Nal-YARtTpjCikii9nJxER19D6diSyk-AWkPb%PXX7Nal-YARtTpjCikii9nJxER19D6diSyk-AWkPb%gDXX7Nal-YARtTpjCikii9nJxER19D6diSyk-AWkPb%anXX7Nal-YARtTpjCikii9nJxER19D6diSyk-AWkPb%aeXX7Nal-YARtTpjCikii9nJxER19D6diSyk-AWkPb%atXX7Nal-YARtTpjCikii9nJxER19D6diSyk-AWkPb%s', 'refs/stash', '--'], expect.objectContaining({ cwd: '/path/to/repo' }));
+			expect(spyOnSpawn).toBeCalledWith('/path/to/git', ['show-ref', '--verify', 'refs/stash'], expect.objectContaining({ cwd: '/path/to/repo' }));
 		});
 
 		it('Should return an error message thrown by git (when getting branches)', async () => {
 			// Setup
 			mockGitThrowingErrorOnce();
 			mockGitSuccessOnce('origin\n');
-			mockGitSuccessOnce('\n');
+			mockGitSuccessOnce(''); // show-ref probe: refs/stash absent
 			vscode.mockExtensionSettingReturnValue('repository.showRemoteHeads', true);
 
 			// Run
@@ -483,7 +484,7 @@ describe('DataSource', () => {
 				'  master\n'
 			);
 			mockGitThrowingErrorOnce();
-			mockGitSuccessOnce('\n');
+			mockGitSuccessOnce(''); // show-ref probe: refs/stash absent
 			vscode.mockExtensionSettingReturnValue('repository.showRemoteHeads', true);
 
 			// Run
@@ -2245,7 +2246,7 @@ describe('DataSource', () => {
 
 		it('Should return no commits (when in an empty repository)', async () => {
 			// Setup
-			mockGitSuccessOnce('\n');
+			mockGitSuccessOnce(''); // show-ref probe: refs/stash absent
 			mockGitThrowingErrorOnce();
 			vscode.mockExtensionSettingReturnValue('repository.showCommitsOnlyReferencedByTags', true);
 			vscode.mockExtensionSettingReturnValue('repository.showRemoteHeads', true);

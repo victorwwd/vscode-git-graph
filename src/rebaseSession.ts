@@ -325,6 +325,7 @@ export class RebaseSession {
 
 	private startPromptWatcher(repo: string, session: RebaseSessionState): void {
 		const promptDir = path.join(session.tmpDir, 'prompt');
+		let lastWatchedEvent = '';
 		const checkForPrompt = () => {
 			if (this.messageEditorPending[repo]) return;
 			// response.txt present means we already answered; rebaseEditor hasn't
@@ -344,7 +345,16 @@ export class RebaseSession {
 
 		try {
 			const watcher = fs.watch(promptDir, { persistent: false }, (eventType, filename) => {
-				this.logger.log('[rebase] prompt: watcher event: eventType=' + eventType + ' filename=' + (filename || '(null)'));
+				// Whether fs.watch delivered events AT ALL is itself diagnostic
+				// (it is known to drop events on some Windows/Node combinations —
+				// the poller below is the fallback). Log one line per distinct
+				// burst: Windows rename churns several change/rename events for a
+				// single write, which would otherwise drown the log.
+				const key = eventType + ' ' + (filename || '(null)');
+				if (key !== lastWatchedEvent) {
+					lastWatchedEvent = key;
+					this.logger.log('[rebase] prompt: watcher event: ' + key);
+				}
 				checkForPrompt();
 			});
 			this.promptWatchers[repo] = watcher;
