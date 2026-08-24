@@ -523,6 +523,107 @@ describe('DataSource - Interactive Rebase', () => {
 		});
 	});
 
+	describe('editCommitMessage (non-HEAD commit)', () => {
+		const spyOnExistsSync = fs.existsSync as jest.Mock;
+		const spyOnMkdtempSync = fs.mkdtempSync as jest.Mock;
+		const spyOnWriteFileSync = fs.writeFileSync as jest.Mock;
+		const spyOnRmSync = fs.rmSync as jest.Mock;
+
+		beforeEach(() => {
+			spyOnExistsSync.mockReset();
+			spyOnMkdtempSync.mockReset();
+			spyOnWriteFileSync.mockReset();
+			spyOnRmSync.mockReset();
+			spyOnMkdtempSync.mockReturnValue('/tmp/gg-editmsg-x');
+			spyOnRmSync.mockImplementation(() => {});
+			vscode.mockExtensionSettingReturnValue('repository.sign.commits', false);
+		});
+
+		it('writes the message to a temp file and passes only the path to the editor shell command', async () => {
+			// Setup: the message contains single quotes, newlines and non-ASCII text —
+			// the old `sh -c 'echo <message> > "$@"'` editor broke on this (shell
+			// re-parse fragmented the message; git failed with "there was a problem
+			// with the editor" and "Please supply the message using either -m or -F").
+			const message = 'feat: 地址栏即席命令①\'>\' 前缀强制当命令\n②失败弹\'无法识别的命令\'并提示 > 前缀';
+			mockGitSuccessOnce('bbbbbbb\n'); // rev-parse HEAD (head !== commitHash)
+			mockGitSuccessOnce(); // diff --quiet probe (worktree clean)
+			mockGitSuccessOnce(); // diff --cached --quiet probe (index clean)
+			mockGitSuccessOnce('0000000\n'); // rev-parse <commitId>^ (parent commit)
+			mockGitSuccessOnce(); // git rebase -i
+			spyOnExistsSync.mockReturnValue(false); // no rebase in progress
+
+			// Run
+			const result = await dataSource.editCommitMessage('/path/to/repo', 'aaaaaaa', message, false);
+
+			// Assert
+			expect(result).toBe(null);
+			// The message is staged to a temp file, not interpolated into a shell command.
+			expect(spyOnWriteFileSync).toHaveBeenCalledWith(path.join('/tmp/gg-editmsg-x', 'message.txt'), message);
+			const spawnCall = spyOnSpawn.mock.calls[4]; // 0=rev-parse HEAD, 1-2=dirt probes, 3=rev-parse <id>^, 4=rebase -i
+			expect(spawnCall[0]).toBe('/path/to/git');
+			expect(spawnCall[1]).toEqual(['rebase', '-i', '0000000']);
+			const env = spawnCall[2].env;
+			expect(env['GIT_EDITOR']).toContain('cat "/tmp/gg-editmsg-x/message.txt"');
+			// The message content must not leak into the editor command line.
+			expect(env['GIT_EDITOR']).not.toContain('\n');
+			expect(env['GIT_EDITOR']).not.toContain('无法识别的命令');
+			expect(env['GIT_EDITOR']).not.toContain('前缀强制当命令');
+			expect(env['GIT_SEQUENCE_EDITOR']).toContain('reword aaaaaaa');
+			// Temp dir is removed after the rebase completes.
+			expect(spyOnRmSync).toHaveBeenCalled();
+		});
+
+		it('returns the git error if the rebase fails, and still cleans up the temp dir', async () => {
+			// Setup
+			mockGitSuccessOnce('bbbbbbb\n'); // rev-parse HEAD
+			mockGitSuccessOnce(); // diff --quiet probe (worktree clean)
+			mockGitSuccessOnce(); // diff --cached --quiet probe (index clean)
+			mockGitSuccessOnce('0000000\n'); // rev-parse <commitId>^
+			mockGitThrowingErrorOnce('editor failed: sh -c'); // git rebase -i
+			spyOnExistsSync.mockReturnValue(false);
+
+			// Run
+			const result = await dataSource.editCommitMessage('/path/to/repo', 'aaaaaaa', 'some message', false);
+
+			// Assert
+			expect(result).toContain('editor failed');
+			expect(spyOnRmSync).toHaveBeenCalled();
+		});
+
+		it('refuses to start a second rebase while one is already in progress', async () => {
+			// Setup: HEAD is not the target commit, but a rebase is running.
+			mockGitSuccessOnce('bbbbbbb\n'); // rev-parse HEAD
+			mockGitSuccessOnce(''); // git status --porcelain (rebase status probe)
+			spyOnExistsSync.mockReturnValue(true); // rebase-merge dir exists
+
+			// Run
+			const result = await dataSource.editCommitMessage('/path/to/repo', 'aaaaaaa', 'some message', false);
+
+			// Assert
+			expect(result).toContain('interactive rebase is in progress');
+			// Only the rev-parse HEAD and status probes ran — no second rebase was spawned.
+			expect(spyOnSpawn).toHaveBeenCalledTimes(2);
+		});
+
+		it('refuses to start the rebase when the working tree has uncommitted changes', async () => {
+			// Setup: HEAD is not the target commit and no rebase is running, but the
+			// worktree is dirty — the merge backend would abort mid-rebase with
+			// "Your local changes would be overwritten by merge" and leave the
+			// picked commit rescheduled, so refuse up front instead.
+			mockGitSuccessOnce('bbbbbbb\n'); // rev-parse HEAD
+			mockGitThrowingErrorOnce(); // diff --quiet probe (worktree dirty)
+			mockGitThrowingErrorOnce(); // diff --cached --quiet probe (index dirty)
+			spyOnExistsSync.mockReturnValue(false); // no rebase in progress
+
+			// Run
+			const result = await dataSource.editCommitMessage('/path/to/repo', 'aaaaaaa', 'some message', false);
+
+			// Assert
+			expect(result).toContain('uncommitted changes');
+			// Only the rev-parse HEAD and the two dirt probes ran — no `rebase -i`.
+			expect(spyOnSpawn).toHaveBeenCalledTimes(3);
+		});
+	});
 	describe('resolveRef', () => {
 		it('returns the trimmed rev-parse output', async () => {
 			// Setup
@@ -537,3 +638,4 @@ describe('DataSource - Interactive Rebase', () => {
 		});
 	});
 });
+

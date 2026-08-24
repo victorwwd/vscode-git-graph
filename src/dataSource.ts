@@ -1,6 +1,7 @@
 import * as cp from 'child_process';
 import * as fs from 'fs';
 import { decode, encodingExists } from 'iconv-lite';
+import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { AskpassEnvironment, AskpassManager } from './askpass/askpassManager';
@@ -1950,6 +1951,13 @@ export class DataSource extends Disposable {
 
 				return this.runGitCommand(args, repo);
 			} else {
+				// Never start a second rebase while one is already in progress:
+				// the existing rebase owns the working tree/index, and an
+				// interleaved `rebase -i` would collide with its state files.
+				const rebase = await this.getRebaseStatus(repo);
+				if (rebase.state !== 'idle') {
+					return 'Cannot edit this commit while an interactive rebase is in progress. Complete, continue or abort the rebase first.';
+				}
 				return this.rebaseEditCommitMessage(repo, commitHash, message);
 			}
 		} catch (error) {
@@ -1965,6 +1973,14 @@ export class DataSource extends Disposable {
 	 * @returns The ErrorInfo from the executed command.
 	 */
 	private async rebaseEditCommitMessage(repo: string, commitHash: string, message: string): Promise<ErrorInfo> {
+		// An `rebase -i` applies each pick with a merge onto the current worktree;
+		// starting it with uncommitted changes fails mid-rebase with "Your local
+		// changes would be overwritten by merge" and leaves the pick rescheduled.
+		// Refuse up front instead of stranding the user in a paused rebase.
+		if (!(await this.isWorkingTreeClean(repo))) {
+			return 'Working tree has uncommitted changes. Commit or stash them before editing the commit message.';
+		}
+
 		const parentCommit = await this.spawnGit(['rev-parse', commitHash + '^'], repo, (stdout) => stdout.trim());
 
 		return new Promise<ErrorInfo>((resolve) => {
@@ -1972,25 +1988,41 @@ export class DataSource extends Disposable {
 				return resolve(UNABLE_TO_FIND_GIT_MSG);
 			}
 
+			// Write the message to a temp file and let the editor copy it into
+			// git's message file. The message content — which may contain
+			// quotes, newlines or non-ASCII text — never reaches a shell
+			// command line, so shell quoting cannot break it and Windows cannot
+			// reject it as an over-long command line. The previous `sh -c 'echo
+			// <message> > "$@"'` approach broke whenever the message contained
+			// single quotes (the shell re-parse fragmented the message and
+			// failed with "File name too long" on Windows).
+			let tempDir = '';
+			let editorMsgPath = '';
+			try {
+				tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'gg-editmsg-'));
+				editorMsgPath = path.join(tempDir, 'message.txt');
+				fs.writeFileSync(editorMsgPath, message);
+			} catch (err) {
+				return resolve('Failed to prepare commit message: ' + (err as Error).message);
+			}
+
 			const args = ['rebase', '-i', parentCommit];
 			if (getConfig().signCommits) {
 				args.push('-S');
 			}
 
-			// Escape the message for shell execution
-			const escapedMessage = message
-				.replace(/\\/g, '\\\\')
-				.replace(/'/g, '\'"\'"\'');
-
-			// The GIT_EDITOR needs to be a command that accepts the filename as an argument
-			// We use a simple echo command that will write only our message to the file
 			const env = Object.assign({}, process.env, this.askpassEnv, {
 				GIT_SEQUENCE_EDITOR: `sed -i.bak "s/^pick ${commitHash.substring(0, 7)}/reword ${commitHash.substring(0, 7)}/" "$1"`,
-				GIT_EDITOR: `sh -c 'echo '"'"'${escapedMessage}'"'"' > "$@"' -- `
+				GIT_EDITOR: `sh -c 'cat "${editorMsgPath.replace(/\\/g, '/')}" > "$@"' -- `
 			});
+
+			const cleanupTemp = () => {
+				try { fs.rmSync(tempDir, { recursive: true, force: true }); } catch (_) { /* best-effort */ }
+			};
 
 			resolveSpawnOutput(cp.spawn(this.gitExecutable.path, args, { cwd: repo, env }))
 				.then(([status, stdout, stderr]) => {
+					cleanupTemp();
 					if (status.code !== 0) {
 						this.logger.log('git failed (exit ' + status.code + ') in ' + repo + ': ' + args.join(' ').slice(0, 120) + ' :: ' + getErrorMessage(status.error, stdout, stderr).slice(0, 300));
 						resolve(getErrorMessage(status.error, stdout, stderr));
@@ -1999,6 +2031,7 @@ export class DataSource extends Disposable {
 					}
 				})
 				.catch((errorMessage) => {
+					cleanupTemp();
 					resolve(errorMessage);
 				});
 			this.logger.logCmd('git', args);
